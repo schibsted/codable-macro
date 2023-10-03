@@ -28,19 +28,33 @@ extension CodableMacro: MemberMacro {
         providingMembersOf declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
+        var debug: [String] = []
+
         let storedProperties: [PropertyDefinition] = declaration.memberBlock.members
             .compactMap {
-                guard 
+                guard
                     let property = $0.decl.as(VariableDeclSyntax.self),
                     let patternBinding = property.bindings.first,
                     patternBinding.accessorBlock == nil,
                     let name = patternBinding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
-                    let typeName = patternBinding.typeAnnotation?.type.as(IdentifierTypeSyntax.self)?.name.text
+                    let typeAnnotation = patternBinding.typeAnnotation
                 else {
                     return nil
                 }
 
-                return PropertyDefinition(name: name, typeName: typeName)
+                let type: (name: String, isOptional: Bool)? = 
+                    if let typeName = typeAnnotation.type.as(IdentifierTypeSyntax.self)?.name.text {
+                        (typeName, false)
+                    } else if let optionalType = typeAnnotation.type.as(OptionalTypeSyntax.self),
+                            let typeName = optionalType.wrappedType.as(IdentifierTypeSyntax.self)?.name.text {
+                        (typeName, true)
+                    } else {
+                        nil
+                    }
+
+                guard let type else { return nil }
+
+                return PropertyDefinition(name: name, typeName: type.name, isOptional: type.isOptional)
             }
 
         if storedProperties.isEmpty {
@@ -70,7 +84,10 @@ extension CodableMacro: MemberMacro {
 
             DeclSyntax("""
             let foo = \"\"\"
-                            \(declaration.memberBlock.members)
+                            \(raw: storedProperties)
+
+
+                            \(raw: debug)
             \"\"\"
             """)
 
@@ -78,22 +95,31 @@ extension CodableMacro: MemberMacro {
     }
 }
 
-struct PropertyDefinition {
+struct PropertyDefinition: CustomDebugStringConvertible {
     let name: String
     let typeName: String
+    let isOptional: Bool
 
     var codingKey: String { name }
 
     var decodeStatement: String {
-        """
-        \(name) = try container.decode(\(typeName).self, forKey: .\(name))
+        let decodeFunction = isOptional ? "decodeIfPresent" : "decode"
+
+        return """
+        \(name) = try container.\(decodeFunction)(\(typeName).self, forKey: .\(name))
         """
     }
 
     var encodeStatement: String {
+        let encodeFunction = isOptional ? "encodeIfPresent" : "encode"
+
+        return """
+        try container.\(encodeFunction)(\(name), forKey: .\(name))
         """
-        try container.encode(\(name), forKey: .\(name))
-        """
+    }
+
+    var debugDescription: String {
+        "PropertyDefinition(let \(name): \(typeName)\(isOptional ? "?" : ""))"
     }
 }
 
