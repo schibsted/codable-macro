@@ -30,32 +30,8 @@ extension CodableMacro: MemberMacro {
     ) throws -> [DeclSyntax] {
         var debug: [String] = []
 
-        let storedProperties: [PropertyDefinition] = declaration.memberBlock.members
-            .compactMap {
-                guard
-                    let property = $0.decl.as(VariableDeclSyntax.self),
-                    let patternBinding = property.bindings.first,
-                    patternBinding.accessorBlock == nil,
-                    let name = patternBinding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
-                    let typeAnnotation = patternBinding.typeAnnotation
-                else {
-                    return nil
-                }
-
-                let type: (name: String, isOptional: Bool)? = 
-                    if let typeName = typeAnnotation.type.as(IdentifierTypeSyntax.self)?.name.text {
-                        (typeName, false)
-                    } else if let optionalType = typeAnnotation.type.as(OptionalTypeSyntax.self),
-                            let typeName = optionalType.wrappedType.as(IdentifierTypeSyntax.self)?.name.text {
-                        (typeName, true)
-                    } else {
-                        nil
-                    }
-
-                guard let type else { return nil }
-
-                return PropertyDefinition(name: name, typeName: type.name, isOptional: type.isOptional)
-            }
+        let storedProperties: [PropertyDefinition] = try declaration.memberBlock.members
+            .compactMap { try PropertyDefinition(declaration: $0.decl) }
 
         if storedProperties.isEmpty {
             throw CodableMacroError(message: "Expected at least one stored property")
@@ -99,6 +75,34 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     let name: String
     let typeName: String
     let isOptional: Bool
+
+    init?(declaration: DeclSyntax) throws {
+        guard
+            let property = declaration.as(VariableDeclSyntax.self),
+            let patternBinding = property.bindings.first,
+            patternBinding.accessorBlock == nil,
+            let name = patternBinding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
+            let typeAnnotation = patternBinding.typeAnnotation
+        else {
+            return nil
+        }
+
+        let type: (name: String, isOptional: Bool)? =
+            if let typeName = typeAnnotation.type.as(IdentifierTypeSyntax.self)?.name.text {
+                (typeName, false)
+            } else if let optionalType = typeAnnotation.type.as(OptionalTypeSyntax.self),
+                    let typeName = optionalType.wrappedType.as(IdentifierTypeSyntax.self)?.name.text {
+                (typeName, true)
+            } else {
+                nil
+            }
+
+        guard let type else { return nil }
+
+        self.name = name
+        self.typeName = type.name
+        self.isOptional = type.isOptional
+    }
 
     var codingKey: String { name }
 
