@@ -8,12 +8,15 @@
 import SwiftUI
 
 struct ContentView: View {
+    let url = URL(string: "https://www.google.com/search")!
+
     var body: some View {
-        VStack {
+        HStack {
             Image(systemName: "globe")
                 .imageScale(.large)
                 .foregroundStyle(.tint)
-            Text("Hello, world!")
+
+            Text(url.host() ?? "")
         }
         .padding()
     }

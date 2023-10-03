@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -11,6 +11,8 @@
 		26212CD62AAB2E7C005E5136 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26212CD52AAB2E7C005E5136 /* ContentView.swift */; };
 		26212CD82AAB2E7D005E5136 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 26212CD72AAB2E7D005E5136 /* Assets.xcassets */; };
 		26212CDC2AAB2E7D005E5136 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 26212CDB2AAB2E7D005E5136 /* Preview Assets.xcassets */; };
+		265A877C2AC6C90600A39094 /* Codable in Frameworks */ = {isa = PBXBuildFile; productRef = 265A877B2AC6C90600A39094 /* Codable */; };
+		265A877F2AC6EBDF00A39094 /* Codable in Frameworks */ = {isa = PBXBuildFile; productRef = 265A877E2AC6EBDF00A39094 /* Codable */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +29,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				265A877C2AC6C90600A39094 /* Codable in Frameworks */,
+				265A877F2AC6EBDF00A39094 /* Codable in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -38,6 +42,7 @@
 			children = (
 				26212CD22AAB2E7C005E5136 /* MacroTest */,
 				26212CD12AAB2E7C005E5136 /* Products */,
+				26212CE42AAB31A7005E5136 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -69,6 +74,13 @@
 			path = "Preview Content";
 			sourceTree = "<group>";
 		};
+		26212CE42AAB31A7005E5136 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -85,6 +97,10 @@
 			dependencies = (
 			);
 			name = MacroTest;
+			packageProductDependencies = (
+				265A877B2AC6C90600A39094 /* Codable */,
+				265A877E2AC6EBDF00A39094 /* Codable */,
+			);
 			productName = MacroTest;
 			productReference = 26212CD02AAB2E7C005E5136 /* MacroTest.app */;
 			productType = "com.apple.product-type.application";
@@ -113,6 +129,9 @@
 				Base,
 			);
 			mainGroup = 26212CC72AAB2E7C005E5136;
+			packageReferences = (
+				265A877D2AC6EBDF00A39094 /* XCLocalSwiftPackageReference "Codable" */,
+			);
 			productRefGroup = 26212CD12AAB2E7C005E5136 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -359,6 +378,24 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		265A877D2AC6EBDF00A39094 /* XCLocalSwiftPackageReference "Codable" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Codable;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		265A877B2AC6C90600A39094 /* Codable */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Codable;
+		};
+		265A877E2AC6EBDF00A39094 /* Codable */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Codable;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 26212CC82AAB2E7C005E5136 /* Project object */;
 }
