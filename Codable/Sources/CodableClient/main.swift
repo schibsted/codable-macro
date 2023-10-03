@@ -7,11 +7,12 @@ enum Qux: String, Codable, Equatable {
 
 @Codable
 struct Foo: Equatable {
-    let bar: String
-    let baz: Int?
-    let qux: Qux
+    var bar: String
+    var baz: Int?
+    var qux: Qux = .one
+}
 
-    var fus: String { bar }
+extension Foo {
 
     init(
         bar: String,
@@ -29,8 +30,10 @@ let subjects: [String: Foo] = [
     "with optional": Foo(bar: "bar", baz: nil, qux: .two)
 ]
 
+print("\nENCODING AND DECODING BACK:")
+
 try subjects.forEach { (key, foo) in
-    print("Running \(key)")
+    print("\n\(key):")
     let encoder = JSONEncoder()
     encoder.outputFormatting = .prettyPrinted
 
@@ -41,4 +44,31 @@ try subjects.forEach { (key, foo) in
     assert(foo == foo2, "\(key) failed the equality check")
 }
 
+print("\nDECODING:")
 
+let jsons = [
+"""
+{
+  "bar" : "bar",
+  "baz" : 1,
+  "qux" : "two"
+}
+""",
+"""
+{
+  "bar" : "bar",
+  "baz" : 1
+}
+""",
+"""
+{
+  "bar" : "bar"
+}
+"""
+]
+
+try jsons.forEach { json in
+    print("\njson: ", json)
+    let foo = try JSONDecoder().decode(Foo.self, from: json.data(using: .utf8)!)
+    print("\ndecoded: ", foo)
+}

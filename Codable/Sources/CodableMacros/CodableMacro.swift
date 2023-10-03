@@ -28,8 +28,6 @@ extension CodableMacro: MemberMacro {
         providingMembersOf declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        var debug: [String] = []
-
         let storedProperties: [PropertyDefinition] = try declaration.memberBlock.members
             .compactMap { try PropertyDefinition(declaration: $0.decl) }
 
@@ -57,16 +55,6 @@ extension CodableMacro: MemberMacro {
                 case \(raw: storedProperties.map { $0.codingKey }.joined(separator: ", ") )
             }
             """),
-
-            DeclSyntax("""
-            let foo = \"\"\"
-                            \(raw: storedProperties)
-
-
-                            \(raw: debug)
-            \"\"\"
-            """)
-
         ]
     }
 }
@@ -75,6 +63,7 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     let name: String
     let typeName: String
     let isOptional: Bool
+    let defaultValue: String?
 
     init?(declaration: DeclSyntax) throws {
         guard
@@ -102,15 +91,16 @@ struct PropertyDefinition: CustomDebugStringConvertible {
         self.name = name
         self.typeName = type.name
         self.isOptional = type.isOptional
+        self.defaultValue = patternBinding.initializer?.value.trimmedDescription
     }
 
     var codingKey: String { name }
 
     var decodeStatement: String {
-        let decodeFunction = isOptional ? "decodeIfPresent" : "decode"
+        let decodeFunction = isOptional || defaultValue != nil ? "decodeIfPresent" : "decode"
 
         return """
-        \(name) = try container.\(decodeFunction)(\(typeName).self, forKey: .\(name))
+        \(name) = try container.\(decodeFunction)(\(typeName).self, forKey: .\(name))\(defaultValue.map { " ?? \($0)" } ?? "")
         """
     }
 
@@ -123,7 +113,7 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     }
 
     var debugDescription: String {
-        "PropertyDefinition(let \(name): \(typeName)\(isOptional ? "?" : ""))"
+        "PropertyDefinition(let \(name): \(typeName)\(isOptional ? "?" : ""))\(defaultValue.map { " = \($0)" } ?? "")"
     }
 }
 
