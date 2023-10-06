@@ -7,6 +7,7 @@ enum Qux: String, Codable, Equatable {
 
 @Codable
 struct Foo: Equatable {
+    @CodableKey("beer") 
     var bar: String
     var baz: Int?
     var qux: Qux = .one
@@ -49,20 +50,20 @@ print("\nDECODING:")
 let jsons = [
 """
 {
-  "bar" : "bar",
+  "beer" : "bar",
   "baz" : 1,
   "qux" : "two"
 }
 """,
 """
 {
-  "bar" : "bar",
+  "beer" : "bar",
   "baz" : 1
 }
 """,
 """
 {
-  "bar" : "bar"
+  "beer" : "bar"
 }
 """
 ]

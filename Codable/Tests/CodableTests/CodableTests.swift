@@ -7,7 +7,7 @@ import XCTest
 import CodableMacros
 
 let testMacros: [String: Macro.Type] = [
-    "stringify": StringifyMacro.self,
+    "Codable": CodableMacro.self,
 ]
 #endif
 
@@ -16,27 +16,16 @@ final class CodableTests: XCTestCase {
         #if canImport(CodableMacros)
         assertMacroExpansion(
             """
-            #stringify(a + b)
+            @Codable
+            struct Foo: Equatable {
+                @CodableKey("beer")
+                var bar: String
+                var baz: Int?
+                var qux: Qux = .one
+            }
             """,
             expandedSource: """
-            (a + b, "a + b")
             """,
-            macros: testMacros
-        )
-        #else
-        throw XCTSkip("macros are only supported when running tests for the host platform")
-        #endif
-    }
-
-    func testMacroWithStringLiteral() throws {
-        #if canImport(CodableMacros)
-        assertMacroExpansion(
-            #"""
-            #stringify("Hello, \(name)")
-            """#,
-            expandedSource: #"""
-            ("Hello, \(name)", #""Hello, \(name)""#)
-            """#,
             macros: testMacros
         )
         #else

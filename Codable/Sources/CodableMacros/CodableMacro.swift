@@ -1,4 +1,3 @@
-import SwiftCompilerPlugin
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
@@ -62,6 +61,7 @@ extension CodableMacro: MemberMacro {
 struct PropertyDefinition: CustomDebugStringConvertible {
     let name: String
     let typeName: String
+    let customCodingKey: String?
     let isOptional: Bool
     let defaultValue: String?
 
@@ -88,13 +88,27 @@ struct PropertyDefinition: CustomDebugStringConvertible {
 
         guard let type else { return nil }
 
+        let propertyAttributes = property.attributes
+            .compactMap { $0.as(AttributeSyntax.self) }
+        
+        let customKey = propertyAttributes
+            .first(where: { $0.isCodableKey })
+            .flatMap { $0.codableKey }
+
         self.name = name
         self.typeName = type.name
+        self.customCodingKey = customKey
         self.isOptional = type.isOptional
         self.defaultValue = patternBinding.initializer?.value.trimmedDescription
     }
 
-    var codingKey: String { name }
+    var codingKey: String {
+        if let customCodingKey {
+            "\(name) = \(customCodingKey)"
+        } else {
+            name
+        }
+    }
 
     var decodeStatement: String {
         let decodeFunction = isOptional || defaultValue != nil ? "decodeIfPresent" : "decode"
@@ -117,15 +131,12 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     }
 }
 
-struct CodableMacroError: Error, CustomStringConvertible {
-    let message: String
+private extension AttributeSyntax {
+    var isCodableKey: Bool {
+        attributeName.as(IdentifierTypeSyntax.self)?.description == CodableKeyMacro.attributeName
+    }
 
-    var description: String { message }
-}
-
-@main
-struct CodablePlugin: CompilerPlugin {
-    let providingMacros: [Macro.Type] = [
-        CodableMacro.self,
-    ]
+    var codableKey: String? {
+        arguments?.as(LabeledExprListSyntax.self)?.first?.expression.description
+    }
 }
