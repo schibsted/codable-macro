@@ -7,9 +7,18 @@ enum Qux: String, Codable, Equatable {
 
 @Codable
 struct Foo: Equatable {
-    @CodableKey("beer") 
+    @CodableKey("beer.doo")
     var bar: String
+
+    @CodableKey("beer.fus")
+    var fus: String
+
+    @CodableKey("ro.duh.dah")
+    var dah: String
+
+    @CodableKey("booz")
     var baz: Int?
+    
     var qux: Qux = .one
 }
 
@@ -17,18 +26,22 @@ extension Foo {
 
     init(
         bar: String,
+        fus: String,
+        dah: String,
         baz: Int?,
         qux: Qux
     ) {
         self.bar = bar
+        self.fus = fus
+        self.dah = dah
         self.baz = baz
         self.qux = qux
     }
 }
 
 let subjects: [String: Foo] = [
-    "vanilla": Foo(bar: "bar", baz: 1, qux: .two),
-    "with optional": Foo(bar: "bar", baz: nil, qux: .two)
+    "vanilla": Foo(bar: "bar", fus: "hello", dah: "world", baz: 1, qux: .two),
+    "with optional": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: .two)
 ]
 
 print("\nENCODING AND DECODING BACK:")
@@ -50,20 +63,16 @@ print("\nDECODING:")
 let jsons = [
 """
 {
-  "beer" : "bar",
-  "baz" : 1,
-  "qux" : "two"
-}
-""",
-"""
-{
-  "beer" : "bar",
-  "baz" : 1
-}
-""",
-"""
-{
-  "beer" : "bar"
+    "beer" : {
+        "doo": "I'm a string",
+        "fus": "Me too"
+    },
+    "ro": {
+        "duh": {
+            "dah": "Hello world"
+        }
+    },
+    "booz" : 1
 }
 """
 ]
