@@ -57,7 +57,7 @@ extension CodableMacro: MemberMacro {
             }
             """),
 
-            DeclSyntax(stringLiteral: codingKeys.declarationCode),
+            try codingKeys.declaration,
         ]
     }
 }
@@ -232,11 +232,10 @@ struct CodingKeysDeclaration {
     let name: String?
     let cases: [String]
     let nestedKeys: [CodingKeysDeclaration]
-    let nestingLevel: Int
 
     var sortingKey: String { name ?? "" }
 
-    init?(name: String? = nil, nestingLevel: Int = 0, paths: [CodingPath]) {
+    init?(name: String? = nil, paths: [CodingPath]) {
         guard !paths.isEmpty else { return nil }
 
         self.name = name
@@ -256,7 +255,7 @@ struct CodingKeysDeclaration {
                     .filter { !$0.isTerminal }
                     .map { $0.droppingFirstComponent() }
 
-                if let keys = CodingKeysDeclaration(name: caseName, nestingLevel: nestingLevel + 1, paths: nestedPaths) {
+                if let keys = CodingKeysDeclaration(name: caseName, paths: nestedPaths) {
                     nestedKeys.append(keys)
                     cases.append(caseName)
                 }
@@ -264,19 +263,31 @@ struct CodingKeysDeclaration {
 
         self.cases = cases.sorted()
         self.nestedKeys = nestedKeys.sorted(by: { $0.sortingKey < $1.sortingKey })
-        self.nestingLevel = nestingLevel
     }
 
-    var indentation: String { String(repeating: "    ", count: nestingLevel) }
-    
     var typeName: String { "\(name?.uppercasingFirstLetter ?? "")CodingKeys" }
 
-    var declarationCode: String {
-        """
-        \(indentation)enum \(typeName): String, CodingKey {
-        \(indentation)    case \(cases.joined(separator: ", "))\(nestedKeys.isEmpty ? "" : "\n\n" + nestedKeys.map { $0.declarationCode }.joined(separator: "\n\n"))
-        \(indentation)}
-        """
+    var declaration: DeclSyntax {
+        get throws {
+            let caseDeclaration = MemberBlockItemSyntax(
+                decl: try EnumCaseDeclSyntax("case \(raw: cases.joined(separator: ", "))")
+            )
+
+            let nestedTypeDeclarations = try nestedKeys
+                .map { try $0.declaration }
+                .map { MemberBlockItemSyntax(decl: $0) }
+
+            let allMembers = ([caseDeclaration] + nestedTypeDeclarations)
+                .compactMap { $0?.withTrailingTrivia(.newlines(2)) }
+
+            let declarationCode: DeclSyntax = """
+            enum \(raw: typeName): String, CodingKey {
+                \(MemberBlockItemListSyntax(allMembers).trimmed)
+            }
+            """
+
+            return declarationCode
+        }
     }
 
     func containerDeclarations(
@@ -353,6 +364,12 @@ private extension String {
 }
 
 private extension SyntaxProtocol {
+
+    func withLeadingTrivia(_ trivia: Trivia) -> Self {
+        var syntax = self
+        syntax.leadingTrivia = trivia
+        return syntax
+    }
 
     func withTrailingTrivia(_ trivia: Trivia) -> Self {
         var syntax = self
