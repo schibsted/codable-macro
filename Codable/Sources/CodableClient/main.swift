@@ -20,7 +20,7 @@ struct Foo: Equatable {
     var baz: Int?
     
     @CodableKey("qox")
-    var qux: Qux = .one
+    var qux: [Qux] = [.one]
 
     var array: [String]
 
@@ -34,7 +34,7 @@ extension Foo {
         fus: String,
         dah: String,
         baz: Int?,
-        qux: Qux,
+        qux: [Qux],
         array: [String],
         optionalArray: [Int]
     ) {
@@ -49,8 +49,8 @@ extension Foo {
 }
 
 let subjects: [String: Foo] = [
-    "vanilla": Foo(bar: "bar", fus: "hello", dah: "world", baz: 1, qux: .two, array: ["a"], optionalArray: [1, 2]),
-    "with optional": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: .two, array: [], optionalArray: [])
+    "vanilla": Foo(bar: "bar", fus: "hello", dah: "world", baz: 1, qux: [.two], array: ["a"], optionalArray: [1, 2]),
+    "with optional": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: [.two], array: [], optionalArray: [])
 ]
 
 print("\nENCODING AND DECODING BACK:")
@@ -82,7 +82,7 @@ let jsons = [
         }
     },
     "booz": 1,
-    "qox": ""
+    "qox": ["1", "two"]
 }
 """
 ]

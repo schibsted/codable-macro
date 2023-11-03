@@ -14,9 +14,7 @@ extension CodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        [
-            try ExtensionDeclSyntax("extension \(type): Codable {}")
-        ]
+        [try ExtensionDeclSyntax("extension \(type): Codable {}")]
     }
 }
 
@@ -29,7 +27,10 @@ extension CodableMacro: MemberMacro {
     ) throws -> [DeclSyntax] {
         let storedProperties: [PropertyDefinition] = try declaration.memberBlock.members
             .compactMap { try PropertyDefinition(declaration: $0.decl) }
-
+        
+        let hasArrayProperties = storedProperties
+            .contains(where: { $0.type.isArray })
+        
         if storedProperties.isEmpty {
             throw CodableMacroError(message: "Expected at least one stored property")
         }
@@ -39,26 +40,12 @@ extension CodableMacro: MemberMacro {
         }
 
         return [
-            DeclSyntax("""
-            init(from decoder: Decoder) throws {
-                \(CodeBlockItemListSyntax(codingKeys.containerDeclarations(ofKind: .decode))
-                    .withTrailingTrivia(.newline))
-                \(CodeBlockItemListSyntax(storedProperties.map { $0.decodeStatement })
-                    .trimmed)
-            }
-            """),
-
-            DeclSyntax("""
-            func encode(to encoder: Encoder) throws {
-                \(CodeBlockItemListSyntax(codingKeys.containerDeclarations(ofKind: .encode))
-                    .withTrailingTrivia(.newline))
-                \(CodeBlockItemListSyntax(storedProperties.map { $0.encodeStatement })
-                    .trimmed)
-            }
-            """),
-
+            DeclSyntax(decoderWithCodingKeys: codingKeys, properties: storedProperties),
+            DeclSyntax(encoderWithCodingKeys: codingKeys, properties: storedProperties),
             try codingKeys.declaration,
+            hasArrayProperties ? .failableContainerForArray() : nil
         ]
+        .compactMap { $0 }
     }
 }
 
@@ -95,42 +82,42 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     }
 
     var decodeStatement: CodeBlockItemSyntax {
-        let decodeFunction = type.isOptional || defaultValue != nil ? "decodeIfPresent" : "decode"
-
-        var decodeBlock: String {
-            if case .array(let elementType) = type, defaultValue == nil {
-                """
-                \(name) = try \(codingPath.codingContainerName).\(decodeFunction)([\(elementType)?].self, forKey: .\(codingPath.containerkey)).compactMap { $0 }
-                """
+        var decodeBlockItems: [CodeBlockItemSyntax] {
+            let blockItems: [CodeBlockItemSyntax?] = if let elementType = type.arrayElementType {
+                [CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName).decode([FailableContainer<\(elementType)>].self, forKey: .\(codingPath.containerkey)).compactMap { $0.wrappedValue }")]
             } else {
-                """
-                \(name) = try \(codingPath.codingContainerName).\(decodeFunction)(\(type.name).self, forKey: .\(codingPath.containerkey))\(defaultValue.map { " ?? \($0)" } ?? "")
-                """
+                [CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName).decode(\(type.name).self, forKey: .\(codingPath.containerkey))")]
             }
+
+            return blockItems
+                .compactMap { $0?.withTrailingTrivia(.newlines(2)) }
         }
 
-        var errorHandlingBlock: String {
-            if let defaultValue {
+        var errorHandlingBlock: CodeBlockItemSyntax? {
+            let statement: String? = if let defaultValue {
                 "\(name) = \(defaultValue)"
             } else if type.isOptional {
                 "\(name) = nil"
             } else if type.isArray {
                 "\(name) = []"
             } else {
-                "throw error"
+                nil
             }
+
+            return statement
+                .map { CodeBlockItemSyntax(stringLiteral: $0) }
         }
 
-        return CodeBlockItemSyntax(
-            stringLiteral: """
-            do {
-                \(CodeBlockItemSyntax(stringLiteral: decodeBlock))
-            } catch {
-                \(CodeBlockItemSyntax(stringLiteral: errorHandlingBlock))
-            }
-            """
-        )
-        .withTrailingTrivia(.newlines(2))
+        return if let errorHandlingBlock {
+            CodeBlockItemSyntax(
+                stringLiteral: "do { \(CodeBlockItemListSyntax(decodeBlockItems).trimmed) } catch { \(errorHandlingBlock) } "
+            )
+            .withLeadingTrivia(.newline)
+            .withTrailingTrivia(.newline)
+        } else {
+            decodeBlockItems[0]
+                .withTrailingTrivia(.newline)
+        }
     }
 
     var encodeStatement: CodeBlockItemSyntax {
@@ -178,23 +165,27 @@ indirect enum TypeDefinition {
         }
     }
 
+    var isArray: Bool {
+        arrayElementType != nil
+    }
+
+    var arrayElementType: String? {
+        switch self {
+        case let .array(elementType):
+            elementType
+        case let .optional(wrappedType):
+            wrappedType.arrayElementType
+        case .identifier:
+            nil
+        }
+    }
+
     var isOptional: Bool {
         switch self {
         case .identifier, .array:
             false
         case .optional:
             true
-        }
-    }
-
-    var isArray: Bool {
-        switch self {
-        case .identifier:
-            false
-        case .array:
-            true
-        case let .optional(wrappedType):
-            wrappedType.isArray
         }
     }
 }
@@ -375,5 +366,37 @@ private extension SyntaxProtocol {
         var syntax = self
         syntax.trailingTrivia = trivia
         return syntax
+    }
+}
+
+private extension DeclSyntax {
+
+    static func failableContainerForArray() -> DeclSyntax {
+        .init(stringLiteral:
+            "struct FailableContainer<T>: Decodable where T: Decodable { " +
+            "var wrappedValue: T?\n\n" +
+            "init(from decoder: Decoder) throws {" +
+            "wrappedValue = try? decoder.singleValueContainer().decode(T.self) " +
+            "}" +
+            "}"
+        )
+    }
+
+    init(decoderWithCodingKeys codingKeys: CodingKeysDeclaration, properties: [PropertyDefinition]) {
+        self.init(stringLiteral: 
+            "init(from decoder: Decoder) throws { " +
+            "\(CodeBlockItemListSyntax(codingKeys.containerDeclarations(ofKind: .decode)).withTrailingTrivia(.newlines(2)))" +
+            "\(CodeBlockItemListSyntax(properties.map { $0.decodeStatement }).trimmed)" +
+            "}"
+        )
+    }
+
+    init(encoderWithCodingKeys codingKeys: CodingKeysDeclaration, properties: [PropertyDefinition]) {
+        self.init(stringLiteral:
+            "func encode(to encoder: Encoder) throws {" +
+            "\(CodeBlockItemListSyntax(codingKeys.containerDeclarations(ofKind: .encode)).withTrailingTrivia(.newlines(2)))" +
+            "\(CodeBlockItemListSyntax(properties.map { $0.encodeStatement }).trimmed)" +
+            "}"
+        )
     }
 }
