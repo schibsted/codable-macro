@@ -82,15 +82,13 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     }
 
     var decodeStatement: CodeBlockItemSyntax {
-        var decodeBlockItems: [CodeBlockItemSyntax] {
-            let blockItems: [CodeBlockItemSyntax?] = if let elementType = type.arrayElementType {
-                [CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName).decode([FailableContainer<\(elementType)>].self, forKey: .\(codingPath.containerkey)).compactMap { $0.wrappedValue }")]
-            } else {
-                [CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName).decode(\(type.name).self, forKey: .\(codingPath.containerkey))")]
-            }
-
-            return blockItems
-                .compactMap { $0?.withTrailingTrivia(.newlines(2)) }
+        let decodeBlock = if let elementType = type.arrayElementType {
+            CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
+                                ".decode([FailableContainer<\(elementType)>].self, forKey: .\(codingPath.containerkey))" +
+                                ".compactMap { $0.wrappedValue }")
+        } else {
+            CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
+                                ".decode(\(type.name).self, forKey: .\(codingPath.containerkey))")
         }
 
         var errorHandlingBlock: CodeBlockItemSyntax? {
@@ -109,13 +107,11 @@ struct PropertyDefinition: CustomDebugStringConvertible {
         }
 
         return if let errorHandlingBlock {
-            CodeBlockItemSyntax(
-                stringLiteral: "do { \(CodeBlockItemListSyntax(decodeBlockItems).trimmed) } catch { \(errorHandlingBlock) } "
-            )
-            .withLeadingTrivia(.newline)
-            .withTrailingTrivia(.newline)
+            CodeBlockItemSyntax(stringLiteral: "do { \(decodeBlock) } catch { \(errorHandlingBlock) }")
+                .withLeadingTrivia(.newline)
+                .withTrailingTrivia(.newline)
         } else {
-            decodeBlockItems[0]
+            decodeBlock
                 .withTrailingTrivia(.newline)
         }
     }
@@ -123,9 +119,8 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     var encodeStatement: CodeBlockItemSyntax {
         let encodeFunction = type.isOptional ? "encodeIfPresent" : "encode"
 
-        var encodeStatement: CodeBlockItemSyntax = """
-        try \(raw: codingPath.codingContainerName).\(raw: encodeFunction)(\(raw: name), forKey: .\(raw: codingPath.containerkey))
-        """
+        var encodeStatement = CodeBlockItemSyntax(stringLiteral: "try \(codingPath.codingContainerName)" +
+                                                  ".\(encodeFunction)(\(name), forKey: .\(codingPath.containerkey))")
         encodeStatement.trailingTrivia = .newline
 
         return encodeStatement
@@ -271,11 +266,10 @@ struct CodingKeysDeclaration {
             let allMembers = ([caseDeclaration] + nestedTypeDeclarations)
                 .compactMap { $0?.withTrailingTrivia(.newlines(2)) }
 
-            let declarationCode: DeclSyntax = """
-            enum \(raw: typeName): String, CodingKey {
-                \(MemberBlockItemListSyntax(allMembers).trimmed)
-            }
-            """
+            let declarationCode = DeclSyntax(stringLiteral: 
+                "enum \(typeName): String, CodingKey {" +
+                "\(MemberBlockItemListSyntax(allMembers).trimmed)" +
+                "}")
 
             return declarationCode
         }
@@ -373,7 +367,7 @@ private extension DeclSyntax {
 
     static func failableContainerForArray() -> DeclSyntax {
         .init(stringLiteral:
-            "struct FailableContainer<T>: Decodable where T: Decodable { " +
+            "private struct FailableContainer<T>: Decodable where T: Decodable { " +
             "var wrappedValue: T?\n\n" +
             "init(from decoder: Decoder) throws {" +
             "wrappedValue = try? decoder.singleValueContainer().decode(T.self) " +
