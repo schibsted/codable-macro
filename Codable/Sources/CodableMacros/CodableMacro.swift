@@ -43,7 +43,7 @@ extension CodableMacro: MemberMacro {
             init(from decoder: Decoder) throws {
                 \(raw: codingKeys.containerDeclarations(ofKind: .decode))
 
-                \(raw: storedProperties.map { $0.decodeStatement }.joined(separator: "\n    "))
+            \(raw: storedProperties.map { $0.decodeStatement }.joined(separator: "\n\n"))
             }
             """),
 
@@ -62,9 +62,8 @@ extension CodableMacro: MemberMacro {
 
 struct PropertyDefinition: CustomDebugStringConvertible {
     let name: String
-    let typeName: String
+    let type: TypeDefinition
     let codingPath: CodingPath
-    let isOptional: Bool
     let defaultValue: String?
 
     init?(declaration: DeclSyntax) throws {
@@ -73,49 +72,72 @@ struct PropertyDefinition: CustomDebugStringConvertible {
             let patternBinding = property.bindings.first,
             patternBinding.accessorBlock == nil,
             let name = patternBinding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
-            let typeAnnotation = patternBinding.typeAnnotation
+            let type = patternBinding.typeAnnotation.flatMap({ TypeDefinition(type: $0.type) })
         else {
             return nil
         }
 
-        let type: (name: String, isOptional: Bool)? =
-            if let typeName = typeAnnotation.type.as(IdentifierTypeSyntax.self)?.name.text {
-                (typeName, false)
-            } else if let optionalType = typeAnnotation.type.as(OptionalTypeSyntax.self),
-                    let typeName = optionalType.wrappedType.as(IdentifierTypeSyntax.self)?.name.text {
-                (typeName, true)
-            } else {
-                nil
-            }
-
-        guard let type else { return nil }
-
         let propertyAttributes = property.attributes
             .compactMap { $0.as(AttributeSyntax.self) }
-        
+
         let pathFragments = propertyAttributes
             .first(where: { $0.isCodableKey })
             .flatMap { $0.codableKey }
             .map { $0.split(separator: ".", omittingEmptySubsequences: true).map { String($0) } }
-            ?? [name]
+        ?? [name]
 
         self.name = name
-        self.typeName = type.name
+        self.type = type
         self.codingPath = CodingPath(components: pathFragments, propertyName: name)
-        self.isOptional = type.isOptional
         self.defaultValue = patternBinding.initializer?.value.trimmedDescription
     }
 
     var decodeStatement: String {
-        let decodeFunction = isOptional || defaultValue != nil ? "decodeIfPresent" : "decode"
+        let decodeFunction = type.isOptional || defaultValue != nil ? "decodeIfPresent" : "decode"
+
+        var decodeBlock: String {
+            if case .array(let elementType) = type, defaultValue == nil {
+                """
+                \(name) = try \(codingPath.codingContainerName).\(decodeFunction)([\(elementType)?].self, forKey: .\(codingPath.containerkey)).compactMap { $0 }
+                """
+            } else {
+                """
+                \(name) = try \(codingPath.codingContainerName).\(decodeFunction)(\(type.name).self, forKey: .\(codingPath.containerkey))\(defaultValue.map { " ?? \($0)" } ?? "")
+                """
+            }
+        }
+
+        var errorHandlingBlock: String {
+            if let defaultValue {
+                """
+                \(name) = \(defaultValue)
+                """
+            } else if type.isOptional {
+                """
+                \(name) = nil
+                """
+            } else if type.isArray {
+                """
+                \(name) = []
+                """
+            } else {
+                """
+                throw error
+                """
+            }
+        }
 
         return """
-        \(name) = try \(codingPath.codingContainerName).\(decodeFunction)(\(typeName).self, forKey: .\(codingPath.containerkey))\(defaultValue.map { " ?? \($0)" } ?? "")
+            do {
+                \(decodeBlock)
+            } catch {
+                \(errorHandlingBlock)
+            }
         """
     }
 
     var encodeStatement: String {
-        let encodeFunction = isOptional ? "encodeIfPresent" : "encode"
+        let encodeFunction = type.isOptional ? "encodeIfPresent" : "encode"
 
         return """
         try \(codingPath.codingContainerName).\(encodeFunction)(\(name), forKey: .\(codingPath.containerkey))
@@ -123,7 +145,57 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     }
 
     var debugDescription: String {
-        "PropertyDefinition(let \(name): \(typeName)\(isOptional ? "?" : ""))\(defaultValue.map { " = \($0)" } ?? "")"
+        "PropertyDefinition(let \(name): \(type.name)\(type.isOptional ? "?" : ""))\(defaultValue.map { " = \($0)" } ?? "")"
+    }
+}
+
+indirect enum TypeDefinition {
+    case optional(wrappedType: TypeDefinition)
+    case array(elementType: String)
+    case identifier(name: String)
+
+    init?(type: TypeSyntax) {
+        if let identifier = type.as(IdentifierTypeSyntax.self) {
+            self = .identifier(name: identifier.name.text)
+        } else if let optional = type.as(OptionalTypeSyntax.self),
+                  let wrappedDeclaration = TypeDefinition(type: optional.wrappedType) {
+            self = .optional(wrappedType: wrappedDeclaration)
+        } else if let array = type.as(ArrayTypeSyntax.self) {
+            self = .array(elementType: array.element.trimmedDescription)
+        } else {
+            return nil
+        }
+    }
+
+    var name: String {
+        switch self {
+        case let .identifier(name):
+            name
+        case let .array(elementType):
+            "[\(elementType)]"
+        case let .optional(wrappedType):
+            wrappedType.name
+        }
+    }
+
+    var isOptional: Bool {
+        switch self {
+        case .identifier, .array:
+            false
+        case .optional:
+            true
+        }
+    }
+
+    var isArray: Bool {
+        switch self {
+        case .identifier:
+            false
+        case .array:
+            true
+        case let .optional(wrappedType):
+            wrappedType.isArray
+        }
     }
 }
 

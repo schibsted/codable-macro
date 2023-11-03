@@ -18,19 +18,9 @@ final class CodableTests: XCTestCase {
             """
             @Codable
             struct Foo: Equatable {
-                @CodableKey("beer.doo")
-                var bar: String
-
-                @CodableKey("beer.fus")
-                var fus: String
-
-                @CodableKey("ro.duh.dah")
-                var dah: String
-
-                @CodableKey("booz")
-                var baz: Int?
-
-                var qux: Qux = .one
+                var array1: [String]
+                var optionalArray: [String]?
+                var array2: Array<String>
             }
             """,
             expandedSource: """
