@@ -41,17 +41,19 @@ extension CodableMacro: MemberMacro {
         return [
             DeclSyntax("""
             init(from decoder: Decoder) throws {
-                \(raw: codingKeys.containerDeclarations(ofKind: .decode))
-
-            \(raw: storedProperties.map { $0.decodeStatement }.joined(separator: "\n\n"))
+                \(CodeBlockItemListSyntax(codingKeys.containerDeclarations(ofKind: .decode))
+                    .withTrailingTrivia(.newline))
+                \(CodeBlockItemListSyntax(storedProperties.map { $0.decodeStatement })
+                    .trimmed)
             }
             """),
 
             DeclSyntax("""
             func encode(to encoder: Encoder) throws {
-                \(raw: codingKeys.containerDeclarations(ofKind: .encode))
-
-                \(raw: storedProperties.map { $0.encodeStatement }.joined(separator: "\n    "))
+                \(CodeBlockItemListSyntax(codingKeys.containerDeclarations(ofKind: .encode))
+                    .withTrailingTrivia(.newline))
+                \(CodeBlockItemListSyntax(storedProperties.map { $0.encodeStatement })
+                    .trimmed)
             }
             """),
 
@@ -92,7 +94,7 @@ struct PropertyDefinition: CustomDebugStringConvertible {
         self.defaultValue = patternBinding.initializer?.value.trimmedDescription
     }
 
-    var decodeStatement: String {
+    var decodeStatement: CodeBlockItemSyntax {
         let decodeFunction = type.isOptional || defaultValue != nil ? "decodeIfPresent" : "decode"
 
         var decodeBlock: String {
@@ -109,39 +111,37 @@ struct PropertyDefinition: CustomDebugStringConvertible {
 
         var errorHandlingBlock: String {
             if let defaultValue {
-                """
-                \(name) = \(defaultValue)
-                """
+                "\(name) = \(defaultValue)"
             } else if type.isOptional {
-                """
-                \(name) = nil
-                """
+                "\(name) = nil"
             } else if type.isArray {
-                """
-                \(name) = []
-                """
+                "\(name) = []"
             } else {
-                """
-                throw error
-                """
+                "throw error"
             }
         }
 
-        return """
+        return CodeBlockItemSyntax(
+            stringLiteral: """
             do {
-                \(decodeBlock)
+                \(CodeBlockItemSyntax(stringLiteral: decodeBlock))
             } catch {
-                \(errorHandlingBlock)
+                \(CodeBlockItemSyntax(stringLiteral: errorHandlingBlock))
             }
-        """
+            """
+        )
+        .withTrailingTrivia(.newlines(2))
     }
 
-    var encodeStatement: String {
+    var encodeStatement: CodeBlockItemSyntax {
         let encodeFunction = type.isOptional ? "encodeIfPresent" : "encode"
 
-        return """
-        try \(codingPath.codingContainerName).\(encodeFunction)(\(name), forKey: .\(codingPath.containerkey))
+        var encodeStatement: CodeBlockItemSyntax = """
+        try \(raw: codingPath.codingContainerName).\(raw: encodeFunction)(\(raw: name), forKey: .\(raw: codingPath.containerkey))
         """
+        encodeStatement.trailingTrivia = .newline
+
+        return encodeStatement
     }
 
     var debugDescription: String {
@@ -283,31 +283,35 @@ struct CodingKeysDeclaration {
         ofKind containerKind: ContainerKind,
         parentContainerVariableName: String? = nil,
         parentContainerTypeName: String? = nil
-    ) -> String {
+    ) -> [CodeBlockItemSyntax] {
         let containerVariableName: String
         let containerTypeName: String
-        let decodingContainerDeclaration: String
+        let declarationCode: String
 
         if let parentContainerVariableName, let parentContainerTypeName, let name {
             containerVariableName = "\(parentContainerVariableName.dropLast("container".count))\(name.uppercasingFirstLetter)Container".lowercasingFirstLetter
             containerTypeName = "\(parentContainerTypeName).\(typeName)"
-            decodingContainerDeclaration = "\(containerKind.declarationKeyword) \(containerVariableName) = \(containerKind.tryPrefix)\(parentContainerVariableName).nestedContainer(keyedBy: \(containerTypeName).self, forKey: .\(name))"
+            declarationCode = "\(containerKind.declarationKeyword) \(containerVariableName) = \(containerKind.tryPrefix)\(parentContainerVariableName).nestedContainer(keyedBy: \(containerTypeName).self, forKey: .\(name))"
         } else {
             containerVariableName = "container"
             containerTypeName = typeName
-            decodingContainerDeclaration = "\(containerKind.declarationKeyword) \(containerVariableName) = \(containerKind.tryPrefix)\(containerKind.coderName).container(keyedBy: \(containerTypeName).self)"
+            declarationCode = "\(containerKind.declarationKeyword) \(containerVariableName) = \(containerKind.tryPrefix)\(containerKind.coderName).container(keyedBy: \(containerTypeName).self)"
         }
 
-        let nestedDecodingContainerDeclarations = nestedKeys.map {
-            $0.containerDeclarations(
-                ofKind: containerKind,
-                parentContainerVariableName: containerVariableName,
-                parentContainerTypeName: containerTypeName
-            )
-        }
+        let containerDeclaration = CodeBlockItemSyntax(stringLiteral: declarationCode)
+            .withTrailingTrivia(.newline)
 
-        return ([decodingContainerDeclaration] + nestedDecodingContainerDeclarations)
-            .joined(separator: "\n")
+        let nestedContainerDeclarations = nestedKeys
+            .map {
+                $0.containerDeclarations(
+                    ofKind: containerKind,
+                    parentContainerVariableName: containerVariableName,
+                    parentContainerTypeName: containerTypeName
+                )
+            }
+            .joined()
+
+        return [containerDeclaration] + nestedContainerDeclarations
     }
 }
 
@@ -345,5 +349,14 @@ private extension String {
 
     var lowercasingFirstLetter: String {
         prefix(1).lowercased() + dropFirst()
+    }
+}
+
+private extension SyntaxProtocol {
+
+    func withTrailingTrivia(_ trivia: Trivia) -> Self {
+        var syntax = self
+        syntax.trailingTrivia = trivia
+        return syntax
     }
 }
