@@ -25,6 +25,9 @@ struct Foo: Equatable {
     var array: [String]
 
     var optionalArray: [Int]?
+
+    @CodableKey("dict")
+    var dict: [String: Int]
 }
 
 extension Foo {
@@ -36,7 +39,8 @@ extension Foo {
         baz: Int?,
         qux: [Qux],
         array: [String],
-        optionalArray: [Int]
+        optionalArray: [Int],
+        dict: [String: Int]
     ) {
         self.bar = bar
         self.fus = fus
@@ -45,12 +49,13 @@ extension Foo {
         self.qux = qux
         self.array = array
         self.optionalArray = optionalArray
+        self.dict = dict
     }
 }
 
 let subjects: [String: Foo] = [
-    "vanilla": Foo(bar: "bar", fus: "hello", dah: "world", baz: 1, qux: [.two], array: ["a"], optionalArray: [1, 2]),
-    "with optional": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: [.two], array: [], optionalArray: [])
+    "vanilla": Foo(bar: "bar", fus: "hello", dah: "world", baz: 1, qux: [.two], array: ["a"], optionalArray: [1, 2], dict: [:]),
+    "with optional": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: [.two], array: [], optionalArray: [], dict: [:])
 ]
 
 print("\nENCODING AND DECODING BACK:")
@@ -82,7 +87,10 @@ let jsons = [
         }
     },
     "booz": 1,
-    "qox": ["1", "two"]
+    "qox": ["1", "two"],
+    "dict": {
+        "foo": 42
+    }
 }
 """
 ]

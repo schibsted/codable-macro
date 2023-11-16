@@ -98,6 +98,8 @@ struct PropertyDefinition: CustomDebugStringConvertible {
                 "\(name) = nil"
             } else if type.isArray {
                 "\(name) = []"
+            } else if type.isDictionary {
+                "\(name) = [:]"
             } else {
                 nil
             }
@@ -134,6 +136,7 @@ struct PropertyDefinition: CustomDebugStringConvertible {
 indirect enum TypeDefinition {
     case optional(wrappedType: TypeDefinition)
     case array(elementType: String)
+    case dictionary(keyType: String, valueType: String)
     case identifier(name: String)
 
     init?(type: TypeSyntax) {
@@ -144,6 +147,11 @@ indirect enum TypeDefinition {
             self = .optional(wrappedType: wrappedDeclaration)
         } else if let array = type.as(ArrayTypeSyntax.self) {
             self = .array(elementType: array.element.trimmedDescription)
+        } else if let dictionary = type.as(DictionaryTypeSyntax.self) {
+            self = .dictionary(
+                keyType: dictionary.key.trimmedDescription,
+                valueType: dictionary.value.trimmedDescription
+            )
         } else {
             return nil
         }
@@ -155,6 +163,8 @@ indirect enum TypeDefinition {
             name
         case let .array(elementType):
             "[\(elementType)]"
+        case .dictionary(let keyType, let elementType):
+            "[\(keyType): \(elementType)]"
         case let .optional(wrappedType):
             wrappedType.name
         }
@@ -164,20 +174,46 @@ indirect enum TypeDefinition {
         arrayElementType != nil
     }
 
+    var isDictionary: Bool {
+        dictionaryElementType != nil
+    }
+
     var arrayElementType: String? {
         switch self {
         case let .array(elementType):
             elementType
         case let .optional(wrappedType):
             wrappedType.arrayElementType
-        case .identifier:
+        case .identifier, .dictionary:
+            nil
+        }
+    }
+
+    var dictionaryElementType: String? {
+        switch self {
+        case let .dictionary(_, elementType):
+            elementType
+        case let .optional(wrappedType):
+            wrappedType.dictionaryElementType
+        case .identifier, .array:
+            nil
+        }
+    }
+
+    var dictionaryKeyType: String? {
+        switch self {
+        case let .dictionary(keyType, _):
+            keyType
+        case let .optional(wrappedType):
+            wrappedType.dictionaryKeyType
+        case .identifier, .array:
             nil
         }
     }
 
     var isOptional: Bool {
         switch self {
-        case .identifier, .array:
+        case .identifier, .array, .dictionary:
             false
         case .optional:
             true
@@ -367,12 +403,12 @@ private extension DeclSyntax {
 
     static func failableContainerForArray() -> DeclSyntax {
         .init(stringLiteral:
-            "private struct FailableContainer<T>: Decodable where T: Decodable { " +
-            "var wrappedValue: T?\n\n" +
-            "init(from decoder: Decoder) throws {" +
-            "wrappedValue = try? decoder.singleValueContainer().decode(T.self) " +
-            "}" +
-            "}"
+                "private struct FailableContainer<T>: Decodable where T: Decodable { " +
+              "var wrappedValue: T?\n\n" +
+              "init(from decoder: Decoder) throws {" +
+              "wrappedValue = try? decoder.singleValueContainer().decode(T.self) " +
+              "}" +
+              "}"
         )
     }
 
