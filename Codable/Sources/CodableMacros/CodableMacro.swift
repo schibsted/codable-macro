@@ -403,12 +403,12 @@ private extension DeclSyntax {
 
     static func failableContainerForArray() -> DeclSyntax {
         .init(stringLiteral:
-                "private struct FailableContainer<T>: Decodable where T: Decodable { " +
-              "var wrappedValue: T?\n\n" +
-              "init(from decoder: Decoder) throws {" +
-              "wrappedValue = try? decoder.singleValueContainer().decode(T.self) " +
-              "}" +
-              "}"
+            "private struct FailableContainer<T>: Decodable where T: Decodable { " +
+            "var wrappedValue: T?\n\n" +
+            "init(from decoder: Decoder) throws {" +
+            "wrappedValue = try? decoder.singleValueContainer().decode(T.self) " +
+            "}" +
+            "}"
         )
     }
 
