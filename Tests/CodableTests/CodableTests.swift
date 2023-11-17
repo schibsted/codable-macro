@@ -17,7 +17,7 @@ final class CodableTests: XCTestCase {
         assertMacroExpansion(
             """
             @Codable
-            struct Foo: Equatable {
+            public struct Foo: Equatable {
                 @CodableKey("beer.doo")
                 var bar: String
 

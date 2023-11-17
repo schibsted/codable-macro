@@ -40,8 +40,8 @@ extension CodableMacro: MemberMacro {
         }
 
         return [
-            DeclSyntax(decoderWithCodingKeys: codingKeys, properties: storedProperties),
-            DeclSyntax(encoderWithCodingKeys: codingKeys, properties: storedProperties),
+            DeclSyntax(decoderWithCodingKeys: codingKeys, properties: storedProperties, isPublic: declaration.isPublic),
+            DeclSyntax(encoderWithCodingKeys: codingKeys, properties: storedProperties, isPublic: declaration.isPublic),
             try codingKeys.declaration,
             hasArrayProperties ? .failableContainerForArray() : nil
         ]
@@ -356,6 +356,13 @@ struct ContainerKind {
     }
 }
 
+private extension DeclGroupSyntax {
+    var isPublic: Bool {
+        modifiers
+            .contains(where: { ["public", "open"].contains($0.trimmedDescription) })
+    }
+}
+
 private extension AttributeSyntax {
     var isCodableKey: Bool {
         attributeName.as(IdentifierTypeSyntax.self)?.description == CodableKeyMacro.attributeName
@@ -406,18 +413,18 @@ private extension DeclSyntax {
         )
     }
 
-    init(decoderWithCodingKeys codingKeys: CodingKeysDeclaration, properties: [PropertyDefinition]) {
-        self.init(stringLiteral: 
-            "init(from decoder: Decoder) throws { " +
+    init(decoderWithCodingKeys codingKeys: CodingKeysDeclaration, properties: [PropertyDefinition], isPublic: Bool) {
+        self.init(stringLiteral:
+            "\(isPublic ? "public " : "")init(from decoder: Decoder) throws { " +
             "\(CodeBlockItemListSyntax(codingKeys.containerDeclarations(ofKind: .decode)).withTrailingTrivia(.newlines(2)))" +
             "\(CodeBlockItemListSyntax(properties.map { $0.decodeStatement }).trimmed)" +
             "}"
         )
     }
 
-    init(encoderWithCodingKeys codingKeys: CodingKeysDeclaration, properties: [PropertyDefinition]) {
+    init(encoderWithCodingKeys codingKeys: CodingKeysDeclaration, properties: [PropertyDefinition], isPublic: Bool) {
         self.init(stringLiteral:
-            "func encode(to encoder: Encoder) throws {" +
+            "\(isPublic ? "public " : "")func encode(to encoder: Encoder) throws {" +
             "\(CodeBlockItemListSyntax(codingKeys.containerDeclarations(ofKind: .encode)).withTrailingTrivia(.newlines(2)))" +
             "\(CodeBlockItemListSyntax(properties.map { $0.encodeStatement }).trimmed)" +
             "}"

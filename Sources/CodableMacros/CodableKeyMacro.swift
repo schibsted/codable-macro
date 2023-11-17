@@ -15,5 +15,4 @@ extension CodableKeyMacro: PeerMacro {
     ) throws -> [DeclSyntax] {
         [] // This macro doesn't generate any code
     }
-    
 }

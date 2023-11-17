@@ -1,12 +1,8 @@
 import Foundation
 import Codable
 
-enum Qux: String, Codable, Equatable {
-    case one, two
-}
-
 @Codable
-struct Foo: Equatable {
+public struct Foo: Equatable {
     @CodableKey("beer.doo")
     var bar: String
 
@@ -27,6 +23,10 @@ struct Foo: Equatable {
     var optionalArray: [Int]?
 
     var dict: [String: Int]
+
+    public enum Qux: String, Codable, Equatable {
+        case one, two
+    }
 }
 
 extension Foo {
