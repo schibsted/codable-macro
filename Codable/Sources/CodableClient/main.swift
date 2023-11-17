@@ -26,7 +26,6 @@ struct Foo: Equatable {
 
     var optionalArray: [Int]?
 
-    @CodableKey("dict")
     var dict: [String: Int]
 }
 
@@ -89,7 +88,8 @@ let jsons = [
     "booz": 1,
     "qox": ["1", "two"],
     "dict": {
-        "foo": 42
+        "foo": 42,
+        "fii": "not an Int"
     }
 }
 """

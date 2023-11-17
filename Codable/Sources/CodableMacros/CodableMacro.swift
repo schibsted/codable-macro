@@ -82,14 +82,19 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     }
 
     var decodeStatement: CodeBlockItemSyntax {
-        let decodeBlock = if let elementType = type.arrayElementType {
-            CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
-                                ".decode([FailableContainer<\(elementType)>].self, forKey: .\(codingPath.containerkey))" +
-                                ".compactMap { $0.wrappedValue }")
-        } else {
-            CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
-                                ".decode(\(type.name).self, forKey: .\(codingPath.containerkey))")
-        }
+        let decodeBlock = 
+            if let arrayElementType = type.arrayElementType {
+                CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
+                                    ".decode([FailableContainer<\(arrayElementType)>].self, forKey: .\(codingPath.containerkey))" +
+                                    ".compactMap { $0.wrappedValue }")
+            } else if let dictionaryElementType = type.dictionaryElementType {
+                CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
+                                    ".decode([\(dictionaryElementType.key): FailableContainer<\(dictionaryElementType.value)>].self, forKey: .\(codingPath.containerkey))" +
+                                    ".compactMapValues { $0.wrappedValue }")
+            } else {
+                CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
+                                    ".decode(\(type.name).self, forKey: .\(codingPath.containerkey))")
+            }
 
         var errorHandlingBlock: CodeBlockItemSyntax? {
             let statement: String? = if let defaultValue {
@@ -189,23 +194,12 @@ indirect enum TypeDefinition {
         }
     }
 
-    var dictionaryElementType: String? {
+    var dictionaryElementType: (key: String, value: String)? {
         switch self {
-        case let .dictionary(_, elementType):
-            elementType
+        case let .dictionary(keyType, elementType):
+            (keyType, elementType)
         case let .optional(wrappedType):
             wrappedType.dictionaryElementType
-        case .identifier, .array:
-            nil
-        }
-    }
-
-    var dictionaryKeyType: String? {
-        switch self {
-        case let .dictionary(keyType, _):
-            keyType
-        case let .optional(wrappedType):
-            wrappedType.dictionaryKeyType
         case .identifier, .array:
             nil
         }
