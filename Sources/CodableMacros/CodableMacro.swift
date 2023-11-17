@@ -14,7 +14,11 @@ extension CodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        [try ExtensionDeclSyntax("extension \(type): Codable {}")]
+        if declaration is ProtocolDeclSyntax {
+            return []
+        }
+
+        return [try ExtensionDeclSyntax("extension \(type): Codable {}")]
     }
 }
 
@@ -25,12 +29,20 @@ extension CodableMacro: MemberMacro {
         providingMembersOf declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
+        guard !(declaration is ProtocolDeclSyntax) else {
+            throw CodableMacroError(message: "Unable to apply to a protocol")
+        }
+
+        if declaration is EnumDeclSyntax {
+            return []
+        }
+
         let storedProperties: [PropertyDefinition] = try declaration.memberBlock.members
             .compactMap { try PropertyDefinition(declaration: $0.decl) }
         
         let hasArrayProperties = storedProperties
             .contains(where: { $0.type.isArray || $0.type.isDictionary })
-        
+
         if storedProperties.isEmpty {
             throw CodableMacroError(message: "Expected at least one stored property")
         }
