@@ -29,7 +29,7 @@ extension CodableMacro: MemberMacro {
             .compactMap { try PropertyDefinition(declaration: $0.decl) }
         
         let hasArrayProperties = storedProperties
-            .contains(where: { $0.type.isArray })
+            .contains(where: { $0.type.isArray || $0.type.isDictionary })
         
         if storedProperties.isEmpty {
             throw CodableMacroError(message: "Expected at least one stored property")
