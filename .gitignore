@@ -9,20 +9,13 @@ build/
 DerivedData/
 BuildSystem/.fl*
 
-## Various settings
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.perspectivev3
-!default.perspectivev3
-xcuserdata/
+## Xcode
+*.xcproj
+*.xcworkspace
+*.xctimeline
 
 ## Other
 *.moved-aside
-*.xcuserstate
 *.orig
 .autoformatter
 
@@ -32,16 +25,11 @@ xcuserdata/
 *.dSYM.zip
 *.dSYM
 
-## Playgrounds
-timeline.xctimeline
-playground.xcworkspace
-
 # Swift Package Manager
 .build/
 .swiftpm
 .swiftlint
 Packages/
-xcuserdata/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
