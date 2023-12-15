@@ -113,10 +113,6 @@ struct PropertyDefinition: CustomDebugStringConvertible {
                 "\(name) = \(defaultValue)"
             } else if type.isOptional {
                 "\(name) = nil"
-            } else if type.isArray {
-                "\(name) = []"
-            } else if type.isDictionary {
-                "\(name) = [:]"
             } else {
                 nil
             }
