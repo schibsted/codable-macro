@@ -8,11 +8,12 @@ import CodableMacros
 
 let testMacros: [String: Macro.Type] = [
     "Codable": CodableMacro.self,
+    "MemberwiseInitializable": MemberwiseInitializableMacro.self,
 ]
 #endif
 
 final class CodableTests: XCTestCase {
-    func testMacro() throws {
+    func testCodableMacro() throws {
         #if canImport(CodableMacros)
         assertMacroExpansion(
             """
@@ -46,4 +47,26 @@ final class CodableTests: XCTestCase {
         throw XCTSkip("macros are only supported when running tests for the host platform")
         #endif
     }
+
+    func testMemberwiseInitializableMacro() throws {
+        #if canImport(CodableMacros)
+        assertMacroExpansion(
+            """
+            @MemberwiseInitializable
+            struct Foo: Equatable {
+                var bar: String = ""
+                var boo: Int?
+                var fus: [String]
+                var dah: [String?: Int?]?
+            }
+            """,
+            expandedSource: """
+            """,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+
 }

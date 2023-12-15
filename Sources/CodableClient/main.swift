@@ -1,7 +1,7 @@
 import Foundation
 import Codable
 
-@Codable
+@Codable @MemberwiseInitializable
 public struct Foo: Equatable {
     @CodableKey("beer.doo")
     var bar: String
@@ -18,7 +18,7 @@ public struct Foo: Equatable {
     @CodableKey("qox")
     var qux: [Qux] = [.one]
 
-    var array: [String]
+    var array: [String] = []
 
     var optionalArray: [Int]?
 
@@ -27,29 +27,6 @@ public struct Foo: Equatable {
     @Codable
     public enum Qux: String, Equatable {
         case one, two
-    }
-}
-
-extension Foo {
-
-    init(
-        bar: String,
-        fus: String,
-        dah: String,
-        baz: Int?,
-        qux: [Qux],
-        array: [String],
-        optionalArray: [Int],
-        dict: [String: Int]
-    ) {
-        self.bar = bar
-        self.fus = fus
-        self.dah = dah
-        self.baz = baz
-        self.qux = qux
-        self.array = array
-        self.optionalArray = optionalArray
-        self.dict = dict
     }
 }
 

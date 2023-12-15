@@ -146,7 +146,7 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     }
 }
 
-indirect enum TypeDefinition {
+indirect enum TypeDefinition: CustomStringConvertible {
     case optional(wrappedType: TypeDefinition)
     case array(elementType: String)
     case dictionary(keyType: String, valueType: String)
@@ -219,6 +219,19 @@ indirect enum TypeDefinition {
             false
         case .optional:
             true
+        }
+    }
+
+    var description: String {
+        switch self {
+        case let .identifier(name):
+            name
+        case let .optional(wrappedType):
+            "\(wrappedType.description)?"
+        case let .array(elementType):
+            "[\(elementType.description)]"
+        case .dictionary(let keyType, let elementType):
+            "[\(keyType.description): \(elementType.description)]"
         }
     }
 }

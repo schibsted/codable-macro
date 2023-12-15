@@ -4,7 +4,7 @@ import SwiftCompilerPlugin
 @main
 struct CodablePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
-        CodableMacro.self, CodableKeyMacro.self
+        CodableMacro.self, CodableKeyMacro.self, MemberwiseInitializableMacro.self
     ]
 }
 
