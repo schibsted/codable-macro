@@ -9,7 +9,7 @@ A Swift macro that can generate Codable implementations.
   - [x] Decoding from nested objects.
 - [x] Lossy coding.
 - [ ] Check for existing conformances/serialization implementation.
-- [ ] Generate compiler errors.
+- [x] Generate compiler errors.
 
 ## Presentation
 
