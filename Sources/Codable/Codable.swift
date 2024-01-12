@@ -9,8 +9,8 @@ public macro Codable() = #externalMacro(module: "CodableMacros", type: "CodableM
 public macro CodableKey(_ key: String) = #externalMacro(module: "CodableMacros", type: "CodableKeyMacro")
 
 @attached(member, names: named(init))
-public macro MemberwiseInitializable(_ accessLevel: AccessLevel? = nil) = #externalMacro(module: "CodableMacros", type: "MemberwiseInitializableMacro")
+public macro MemberwiseInitializable(_ accessLevel: MemberAccessLevel? = nil) = #externalMacro(module: "CodableMacros", type: "MemberwiseInitializableMacro")
 
-public enum AccessLevel {
-    case `open`, `public`, `internal`, `fileprivate`, `private`
+public enum MemberAccessLevel {
+    case `public`, `internal`, `fileprivate`, `private`
 }

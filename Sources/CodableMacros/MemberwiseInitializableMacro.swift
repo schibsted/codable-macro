@@ -13,18 +13,18 @@ extension MemberwiseInitializableMacro: MemberMacro {
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
         guard !(declaration is ProtocolDeclSyntax) else {
-            throw CodableMacroError(message: "Unable to apply to a protocol")
+            throw MemberwiseInitializableMacroError.notApplicableToProtocol
         }
 
         guard !(declaration is EnumDeclSyntax) else {
-            throw CodableMacroError(message: "Unable to apply to an enum")
+            throw MemberwiseInitializableMacroError.notApplicableToEnum
         }
 
         let storedProperties: [PropertyDefinition] = try declaration.memberBlock.members
             .compactMap { try PropertyDefinition(declaration: $0.decl) }
 
         if storedProperties.isEmpty {
-            throw CodableMacroError(message: "Expected at least one stored property")
+            throw MemberwiseInitializableMacroError.noStoredProperties
         }
 
         let accessLevel: String?
@@ -34,16 +34,16 @@ extension MemberwiseInitializableMacro: MemberMacro {
                 let firstArgument = argumentList.first,
                 argumentList.count == 1
             else {
-                throw CodableMacroError(message: "Expected 1 argument")
+                fatalError("Expected 1 argument")
             }
 
             guard let level = firstArgument.expression.as(MemberAccessExprSyntax.self)?.declName.trimmedDescription else {
-                throw CodableMacroError(message: "Expected access level")
+                fatalError("Expected access level")
             }
 
             accessLevel = level
         } else if let typeAccessLevel = declaration.modifiers.first?.trimmedDescription {
-            accessLevel = typeAccessLevel
+            accessLevel = typeAccessLevel == "open" ? "public" : typeAccessLevel
         } else {
             accessLevel = nil
         }

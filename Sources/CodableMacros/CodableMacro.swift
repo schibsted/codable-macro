@@ -14,7 +14,7 @@ extension CodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        if declaration is ProtocolDeclSyntax {
+        if declaration is ProtocolDeclSyntax || declaration is ActorDeclSyntax {
             return []
         }
 
@@ -29,8 +29,12 @@ extension CodableMacro: MemberMacro {
         providingMembersOf declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
+        guard !(declaration is ActorDeclSyntax) else {
+            throw CodableMacroError.notApplicableToActor
+        }
+
         guard !(declaration is ProtocolDeclSyntax) else {
-            throw CodableMacroError(message: "Unable to apply to a protocol")
+            throw CodableMacroError.notApplicableToProtocol
         }
 
         if declaration is EnumDeclSyntax {
@@ -39,16 +43,16 @@ extension CodableMacro: MemberMacro {
 
         let storedProperties: [PropertyDefinition] = try declaration.memberBlock.members
             .compactMap { try PropertyDefinition(declaration: $0.decl) }
-        
+
+        if storedProperties.isEmpty {
+            return []
+        }
+
         let hasArrayProperties = storedProperties
             .contains(where: { $0.type.isArray || $0.type.isDictionary })
 
-        if storedProperties.isEmpty {
-            throw CodableMacroError(message: "Expected at least one stored property")
-        }
-
         guard let codingKeys = CodingKeysDeclaration(paths: storedProperties.map { $0.codingPath }) else {
-            throw CodableMacroError(message: "Failed to generate coding keys")
+            fatalError("Failed to generate coding keys")
         }
 
         return [
