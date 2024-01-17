@@ -6,7 +6,7 @@ on:
     types: ["opened", "reopened", "synchronize"]
   push:
     branches:
-      - master
+      - main
 
 env:
   NSUnbufferedIO: YES
