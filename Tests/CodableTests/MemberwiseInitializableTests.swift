@@ -33,6 +33,30 @@ final class MemberwiseInitializableTests: XCTestCase {
         )
     }
     
+    func testMemberwiseInitializableMacro_whenPropertyTypeHasGenerics() throws {
+        assertMacroExpansion(
+            """
+            @MemberwiseInitializable
+            struct Foo {
+                var bar: Array<String>
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                var bar: Array<String>
+
+                init(
+                    bar: Array<String>
+                ) {
+                    self.bar = bar
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+    
     func testMemberwiseInitializableMacro_withDefaultPropertyValues() throws {
         assertMacroExpansion(
             """

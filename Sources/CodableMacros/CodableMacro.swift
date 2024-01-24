@@ -158,7 +158,10 @@ indirect enum TypeDefinition: CustomStringConvertible {
 
     init?(type: TypeSyntax) {
         if let identifier = type.as(IdentifierTypeSyntax.self) {
-            self = .identifier(name: identifier.name.text)
+            let name = [identifier.name.text, identifier.genericArgumentClause?.trimmedDescription]
+                .compactMap { $0 }
+                .joined()
+            self = .identifier(name: name)
         } else if let optional = type.as(OptionalTypeSyntax.self),
                   let wrappedDeclaration = TypeDefinition(type: optional.wrappedType) {
             self = .optional(wrappedType: wrappedDeclaration)
