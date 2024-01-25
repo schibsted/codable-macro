@@ -24,6 +24,9 @@ public struct Foo: Equatable {
 
     var dict: [String: Int]
 
+    @CodableIgnored
+    var neverMindMe: String = "some value"
+
     @Codable
     public enum Qux: String, Equatable {
         case one, two

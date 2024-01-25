@@ -5,8 +5,9 @@ A Swift macro that can generate Codable implementations.
 - [x] Codable conformance for simple types.
 - [x] Optional properties.
 - [x] Default values.
-- [x] Custom keys.
+- [x] Custom keys (using the `@CodableKey("foo")` attribute).
   - [x] Decoding from nested objects.
+- [x] Ignoring certain properties (by marking them with the `@CodableIgnored` attribute).
 - [x] Lossy coding.
 - [ ] Check for existing conformances/serialization implementation.
 - [x] Generate compiler errors.

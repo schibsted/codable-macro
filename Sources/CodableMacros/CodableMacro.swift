@@ -43,6 +43,7 @@ extension CodableMacro: MemberMacro {
 
         let storedProperties: [PropertyDefinition] = try declaration.memberBlock.members
             .compactMap { try PropertyDefinition(declaration: $0.decl) }
+            .filter { !$0.isIgnored }
 
         if storedProperties.isEmpty {
             return []
@@ -70,6 +71,7 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     let type: TypeDefinition
     let codingPath: CodingPath
     let defaultValue: String?
+    let isIgnored: Bool
 
     init?(declaration: DeclSyntax) throws {
         guard
@@ -95,6 +97,7 @@ struct PropertyDefinition: CustomDebugStringConvertible {
         self.type = type
         self.codingPath = CodingPath(components: pathFragments, propertyName: name)
         self.defaultValue = patternBinding.initializer?.value.trimmedDescription
+        self.isIgnored = propertyAttributes.contains(where: { $0.isIgnored })
     }
 
     var decodeStatement: CodeBlockItemSyntax {
@@ -392,6 +395,10 @@ private extension DeclGroupSyntax {
 }
 
 private extension AttributeSyntax {
+    var isIgnored: Bool {
+        attributeName.as(IdentifierTypeSyntax.self)?.description == CodableIgnoredMacro.attributeName
+    }
+
     var isCodableKey: Bool {
         attributeName.as(IdentifierTypeSyntax.self)?.description == CodableKeyMacro.attributeName
     }

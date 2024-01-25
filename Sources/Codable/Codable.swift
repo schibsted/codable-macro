@@ -8,6 +8,9 @@ public macro Codable() = #externalMacro(module: "CodableMacros", type: "CodableM
 @attached(peer)
 public macro CodableKey(_ key: String) = #externalMacro(module: "CodableMacros", type: "CodableKeyMacro")
 
+@attached(peer)
+public macro CodableIgnored() = #externalMacro(module: "CodableMacros", type: "CodableIgnoredMacro")
+
 @attached(member, names: named(init))
 public macro MemberwiseInitializable(_ accessLevel: MemberAccessLevel? = nil) = #externalMacro(module: "CodableMacros", type: "MemberwiseInitializableMacro")
 

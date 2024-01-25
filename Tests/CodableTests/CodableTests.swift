@@ -380,6 +380,49 @@ final class CodableTests: XCTestCase {
         )
     }
 
+    func testCodableMacro_whenPropertyIsIgnored_IsExcludedFromGeneratedCode() throws {
+        assertMacroExpansion(
+            """
+            @Codable
+            struct Foo {
+                var bar: String
+
+                @CodableIgnored
+                var baz: Int = 42
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                var bar: String
+
+                @CodableIgnored
+                var baz: Int = 42
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+                    bar = try container.decode(String.self, forKey: .bar)
+                }
+
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+
+                    try container.encode(bar, forKey: .bar)
+                }
+
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                }
+            }
+
+            extension Foo: Codable {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
     func testCodableMacro_whenDecodingFromNestedContainer_generatesNestedCodingKeys() throws {
         assertMacroExpansion(
             """
@@ -528,6 +571,9 @@ final class CodableTests: XCTestCase {
                 public var optionalArray: [Int]?
 
                 public var dict: [String: Int]
+
+                @CodableIgnored
+                public var neverMindMe: String = "some value"
             }
             """,
             expandedSource: """
@@ -553,6 +599,9 @@ final class CodableTests: XCTestCase {
                 public var optionalArray: [Int]?
 
                 public var dict: [String: Int]
+
+                @CodableIgnored
+                public var neverMindMe: String = "some value"
 
                 public init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
