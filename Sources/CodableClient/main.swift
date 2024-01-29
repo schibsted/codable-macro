@@ -33,6 +33,16 @@ public struct Foo: Equatable {
     }
 }
 
+@Decodable
+struct SomeDecodable {
+    let bar: String
+}
+
+@Encodable
+struct SomeEncodable {
+    let bar: String
+}
+
 let subjects: [String: Foo] = [
     "vanilla": Foo(bar: "bar", fus: "hello", dah: "world", baz: 1, qux: [.two], array: ["a"], optionalArray: [1, 2], dict: [:]),
     "with optional": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: [.two], array: [], optionalArray: [], dict: [:])

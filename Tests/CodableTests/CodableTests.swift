@@ -7,6 +7,8 @@ import XCTest
 final class CodableTests: XCTestCase {
     let testMacros: [String: Macro.Type] = [
         "Codable": CodableMacro.self,
+        "Decodable": DecodableMacro.self,
+        "Encodable": EncodableMacro.self,
         "CodableKey": CodableKeyMacro.self,
         "CodableIgnored": CodableIgnoredMacro.self
     ]
@@ -526,7 +528,7 @@ final class CodableTests: XCTestCase {
         )
     }
 
-    func testCodableMacro_whenAppliedToEmptyType_throwsError() throws {
+    func testCodableMacro_whenAppliedToEmptyType() throws {
         assertMacroExpansion(
             """
             @Codable
@@ -578,6 +580,28 @@ final class CodableTests: XCTestCase {
             """,
             diagnostics: [
                 DiagnosticSpec(message: CodableMacroError.notApplicableToProtocol.description, line: 1, column: 1)
+            ],
+            macros: testMacros
+        )
+    }
+
+    func testCodableMacro_whenCombinedWithAnotherCodableMacro_throwsError() throws {
+        assertMacroExpansion(
+            """
+            @Codable @Encodable
+            struct Foo {
+                var bar: String
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                var bar: String
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: CodableMacroError.moreThanOneCodableMacroApplied.description, line: 1, column: 1),
+                DiagnosticSpec(message: CodableMacroError.moreThanOneCodableMacroApplied.description, line: 1, column: 10)
             ],
             macros: testMacros
         )
