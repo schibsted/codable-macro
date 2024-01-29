@@ -6,7 +6,9 @@ import XCTest
 
 final class CodableTests: XCTestCase {
     let testMacros: [String: Macro.Type] = [
-        "Codable": CodableMacro.self
+        "Codable": CodableMacro.self,
+        "CodableKey": CodableKeyMacro.self,
+        "CodableIgnored": CodableIgnoredMacro.self
     ]
 
     func testCodableMacro_withSimpleType() throws {
@@ -353,7 +355,6 @@ final class CodableTests: XCTestCase {
             expandedSource: """
 
             struct Foo {
-                @CodableKey("baz")
                 var bar: String
 
                 init(from decoder: Decoder) throws {
@@ -380,7 +381,7 @@ final class CodableTests: XCTestCase {
         )
     }
 
-    func testCodableMacro_whenPropertyIsIgnored_IsExcludedFromGeneratedCode() throws {
+    func testCodableMacro_whenPropertyIsExplicitlyIgnored_isExcludedFromGeneratedCode() throws {
         assertMacroExpansion(
             """
             @Codable
@@ -395,9 +396,46 @@ final class CodableTests: XCTestCase {
 
             struct Foo {
                 var bar: String
-
-                @CodableIgnored
                 var baz: Int = 42
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+                    bar = try container.decode(String.self, forKey: .bar)
+                }
+
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+
+                    try container.encode(bar, forKey: .bar)
+                }
+
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                }
+            }
+
+            extension Foo: Codable {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    func testCodableMacro_whenImmutablePropertyHasDefaultValue_isExcludedFromGeneratedCode() throws {
+        assertMacroExpansion(
+            """
+            @Codable
+            struct Foo {
+                let bar: String
+                let baz: Int = 42
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                let bar: String
+                let baz: Int = 42
 
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -435,7 +473,6 @@ final class CodableTests: XCTestCase {
             expandedSource: """
 
             struct Foo {
-                @CodableKey("baz.qux")
                 var bar: String
 
                 init(from decoder: Decoder) throws {
@@ -551,57 +588,35 @@ final class CodableTests: XCTestCase {
             """
             @Codable
             public struct Foo: Equatable {
-                @CodableKey("beer.doo")
-                public var bar: String
-
-                @CodableKey("beer.fus")
-                public var fus: String
-
-                @CodableKey("ro.duh.dah")
-                public var dah: String
-
-                @CodableKey("booz")
-                public var baz: Int?
-
-                @CodableKey("qox")
-                public var qux: [Qux] = [.one]
+                @CodableKey("beer.doo") public var bar: String
+                @CodableKey("beer.fus") public var fus: String
+                @CodableKey("ro.duh.dah") public var dah: String
+                @CodableKey("booz") public var baz: Int?
+                @CodableKey("qox") public var qux: [Qux] = [.one]
 
                 public var array: [String] = []
-
                 public var optionalArray: [Int]?
-
                 public var dict: [String: Int]
 
-                @CodableIgnored
-                public var neverMindMe: String = "some value"
+                @CodableIgnored public var neverMindMe: String = "some value"
+                public let immutable: Int = 0
             }
             """,
             expandedSource: """
 
             public struct Foo: Equatable {
-                @CodableKey("beer.doo")
                 public var bar: String
-
-                @CodableKey("beer.fus")
                 public var fus: String
-
-                @CodableKey("ro.duh.dah")
                 public var dah: String
-
-                @CodableKey("booz")
                 public var baz: Int?
-
-                @CodableKey("qox")
                 public var qux: [Qux] = [.one]
 
                 public var array: [String] = []
-
                 public var optionalArray: [Int]?
-
                 public var dict: [String: Int]
 
-                @CodableIgnored
                 public var neverMindMe: String = "some value"
+                public let immutable: Int = 0
 
                 public init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)

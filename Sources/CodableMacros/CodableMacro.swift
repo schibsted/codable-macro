@@ -71,7 +71,8 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     let type: TypeDefinition
     let codingPath: CodingPath
     let defaultValue: String?
-    let isIgnored: Bool
+    let isImmutable: Bool
+    let isExplicitlyIgnored: Bool
 
     init?(declaration: DeclSyntax) throws {
         guard
@@ -97,7 +98,13 @@ struct PropertyDefinition: CustomDebugStringConvertible {
         self.type = type
         self.codingPath = CodingPath(components: pathFragments, propertyName: name)
         self.defaultValue = patternBinding.initializer?.value.trimmedDescription
-        self.isIgnored = propertyAttributes.contains(where: { $0.isIgnored })
+        self.isImmutable = property.isImmutable
+        self.isExplicitlyIgnored = propertyAttributes.contains(where: { $0.isCodableIgnored })
+    }
+
+    var isIgnored: Bool {
+        isExplicitlyIgnored || // marked with @CodableIgnored
+        (isImmutable && defaultValue != nil) // Assigning an immutable property with a default value is a compiler error
     }
 
     var decodeStatement: CodeBlockItemSyntax {
@@ -387,6 +394,12 @@ struct ContainerKind {
     }
 }
 
+private extension VariableDeclSyntax {
+    var isImmutable: Bool {
+        bindingSpecifier.trimmedDescription == "let"
+    }
+}
+
 private extension DeclGroupSyntax {
     var isPublic: Bool {
         modifiers
@@ -395,12 +408,12 @@ private extension DeclGroupSyntax {
 }
 
 private extension AttributeSyntax {
-    var isIgnored: Bool {
-        attributeName.as(IdentifierTypeSyntax.self)?.description == CodableIgnoredMacro.attributeName
+    var isCodableIgnored: Bool {
+        attributeName.as(IdentifierTypeSyntax.self)?.trimmedDescription == CodableIgnoredMacro.attributeName
     }
 
     var isCodableKey: Bool {
-        attributeName.as(IdentifierTypeSyntax.self)?.description == CodableKeyMacro.attributeName
+        attributeName.as(IdentifierTypeSyntax.self)?.trimmedDescription == CodableKeyMacro.attributeName
     }
 
     var codableKey: String? {
