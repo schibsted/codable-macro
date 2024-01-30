@@ -22,6 +22,7 @@ extension MemberwiseInitializableMacro: MemberMacro {
 
         let storedProperties: [PropertyDefinition] = try declaration.memberBlock.members
             .compactMap { try PropertyDefinition(declaration: $0.decl) }
+            .filter { !$0.isImmutableWithDefaultValue }
 
         if storedProperties.isEmpty {
             throw MemberwiseInitializableMacroError.noStoredProperties

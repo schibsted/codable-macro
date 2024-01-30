@@ -51,7 +51,7 @@ extension EncodableMacro: MemberMacro {
 
         let storedProperties: [PropertyDefinition] = try declaration.memberBlock.members
             .compactMap { try PropertyDefinition(declaration: $0.decl) }
-            .filter { !$0.isIgnored }
+            .filter { !$0.isExcludedFromCodable }
 
         if storedProperties.isEmpty {
             return []

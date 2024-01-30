@@ -9,7 +9,9 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     let codingPath: CodingPath
     let defaultValue: String?
     let isImmutable: Bool
-    let isExplicitlyIgnored: Bool
+
+    // marked with @CodableIgnored
+    let isExplicitlyExcludedFromCodable: Bool
 
     init?(declaration: DeclSyntax) throws {
         guard
@@ -36,11 +38,14 @@ struct PropertyDefinition: CustomDebugStringConvertible {
         self.codingPath = CodingPath(components: pathFragments, propertyName: name)
         self.defaultValue = patternBinding.initializer?.value.trimmedDescription
         self.isImmutable = property.isImmutable
-        self.isExplicitlyIgnored = propertyAttributes.contains(where: { $0.isCodableIgnored })
+        self.isExplicitlyExcludedFromCodable = propertyAttributes.contains(where: { $0.isCodableIgnored })
     }
 
-    var isIgnored: Bool {
-        isExplicitlyIgnored || // marked with @CodableIgnored
+    var isExcludedFromCodable: Bool {
+        isExplicitlyExcludedFromCodable || isImmutableWithDefaultValue
+    }
+
+    var isImmutableWithDefaultValue: Bool {
         (isImmutable && defaultValue != nil) // Assigning an immutable property with a default value is a compiler error
     }
 

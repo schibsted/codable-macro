@@ -81,6 +81,36 @@ final class MemberwiseInitializableTests: XCTestCase {
         )
     }
     
+    func testMemberwiseInitializableMacro_ifImmutablePropertyHasDefaultValue_isNotIncluded() throws {
+        assertMacroExpansion(
+            """
+            @MemberwiseInitializable
+            struct Foo {
+                var bar: Bar
+                var mutable: String = "something"
+                let immutable: String = "something else"
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                var bar: Bar
+                var mutable: String = "something"
+                let immutable: String = "something else"
+
+                init(
+                    bar: Bar,
+                    mutable: String = "something"
+                ) {
+                    self.bar = bar
+                    self.mutable = mutable
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+    
     func testMemberwiseInitializableMacro_withPublicType_generatesPublicInitializer() throws {
         assertMacroExpansion(
             """
