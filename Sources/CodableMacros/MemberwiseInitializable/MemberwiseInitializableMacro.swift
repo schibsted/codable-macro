@@ -30,7 +30,7 @@ extension MemberwiseInitializableMacro: MemberMacro {
 
         let accessLevel: String?
         if let arguments = node.arguments {
-            guard 
+            guard
                 case .argumentList(let argumentList) = arguments,
                 let firstArgument = argumentList.first,
                 argumentList.count == 1
@@ -52,12 +52,33 @@ extension MemberwiseInitializableMacro: MemberMacro {
         return [
         """
         \(raw: accessLevel.map { "\($0) " } ?? "")init(
-            \(raw: storedProperties.map { "\($0.name): \($0.type.description)\($0.defaultValue.map { " = \($0)" } ?? "")" }
-                .joined(separator: ",\n"))
+            \(raw: storedProperties
+                .map {
+                    "\($0.name): \($0.type.description)\(($0.defaultValue ?? $0.type.appropriateInitialValue).map { " = \($0)" } ?? "")"
+                }
+                .joined(separator: ",\n")
+            )
         ) {
-            \(raw: storedProperties.map { "self.\($0.name) = \($0.name)" }.joined(separator: "\n"))
+            \(raw: storedProperties
+                .map {
+                    "self.\($0.name) = \($0.name)"
+                }
+                .joined(separator: "\n")
+            )
         }
         """
         ]
+    }
+}
+
+private extension TypeDefinition {
+
+    var appropriateInitialValue: String? {
+        switch self {
+        case .optional: "nil"
+        case .identifier(let name) where name.starts(with: "Optional<"): "nil"
+
+        default: nil
+        }
     }
 }
