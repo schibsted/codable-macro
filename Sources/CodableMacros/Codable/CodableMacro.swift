@@ -65,7 +65,7 @@ extension CodableMacro: MemberMacro {
         }
 
         return [
-            DeclSyntax(decoderWithCodingKeys: codingKeys, properties: storedProperties, isPublic: declaration.isPublic),
+            DeclSyntax(decoderWithCodingKeys: codingKeys, properties: storedProperties, isPublic: declaration.isPublic, needsValidation: node.needsValidation),
             DeclSyntax(encoderWithCodingKeys: codingKeys, properties: storedProperties, isPublic: declaration.isPublic),
             try codingKeys.declaration,
             shouldIncludeFailableContainer ? .failableContainer() : nil

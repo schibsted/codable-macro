@@ -87,6 +87,7 @@ final class DecodableTests: XCTestCase {
                     } catch {
                         optionalArray = nil
                     }
+
                     dict = try container.decode([String: FailableContainer<Int>].self, forKey: .dict).compactMapValues {
                         $0.wrappedValue
                     }
@@ -156,6 +157,45 @@ final class DecodableTests: XCTestCase {
             expandedSource: """
 
             struct Foo {
+            }
+
+            extension Foo: Decodable {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    func testDecodableMacro_whenValidationNeeded_includesValidationCode() throws {
+        assertMacroExpansion(
+            """
+            @Decodable(needsValidation: true)
+            struct Foo {
+                let bar: String
+
+                var isValid: Bool { !bar.isEmpty }
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                let bar: String
+
+                var isValid: Bool { !bar.isEmpty }
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+                    bar = try container.decode(String.self, forKey: .bar)
+
+                    if !self.isValid {
+                        throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Validation failed"))
+                    }
+                }
+
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                }
             }
 
             extension Foo: Decodable {

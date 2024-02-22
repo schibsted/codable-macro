@@ -1,7 +1,7 @@
 import Foundation
 import Codable
 
-@Codable @MemberwiseInitializable
+@Codable(needsValidation: true) @MemberwiseInitializable
 public struct Foo: Equatable {
     @CodableKey("beer.doo")
     var bar: String
@@ -31,6 +31,8 @@ public struct Foo: Equatable {
     public enum Qux: String, Equatable {
         case one, two
     }
+
+    private var isValid: Bool { optionalArray?.isEmpty != true }
 }
 
 @Decodable
@@ -45,21 +47,26 @@ struct SomeEncodable {
 
 let subjects: [String: Foo] = [
     "vanilla": Foo(bar: "bar", fus: "hello", dah: "world", baz: 1, qux: [.two], array: ["a"], optionalArray: [1, 2], dict: [:]),
-    "with optional": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: [.two], array: [], optionalArray: [], dict: [:])
+    "with optional": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: [.two], array: [], optionalArray: nil, dict: [:]),
+    "invalid": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: [.two], array: [], optionalArray: [], dict: [:])
 ]
 
 print("\nENCODING AND DECODING BACK:")
 
 try subjects.forEach { (key, foo) in
-    print("\n\(key):")
+    print("\n'\(key)':")
     let encoder = JSONEncoder()
     encoder.outputFormatting = .prettyPrinted
 
     let json = try encoder.encode(foo)
     print(String(data: json, encoding: .utf8)!)
 
-    let foo2 = try JSONDecoder().decode(Foo.self, from: json)
-    assert(foo == foo2, "\(key) failed the equality check")
+    do {
+        let foo2 = try JSONDecoder().decode(Foo.self, from: json)
+        assert(foo == foo2, "\(key) failed the equality check")
+    } catch {
+        print("Failed to decode '\(key)': \(error)")
+    }
 }
 
 print("\nDECODING:")
@@ -78,6 +85,7 @@ let jsons = [
     },
     "booz": 1,
     "qox": ["1", "two"],
+    "optionalArray": [1, 2, 3],
     "dict": {
         "foo": 42,
         "fii": "not an Int"

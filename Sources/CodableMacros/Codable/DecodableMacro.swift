@@ -65,7 +65,7 @@ extension DecodableMacro: MemberMacro {
         }
 
         return [
-            DeclSyntax(decoderWithCodingKeys: codingKeys, properties: storedProperties, isPublic: declaration.isPublic),
+            DeclSyntax(decoderWithCodingKeys: codingKeys, properties: storedProperties, isPublic: declaration.isPublic, needsValidation: node.needsValidation),
             try codingKeys.declaration,
             shouldIncludeFailableContainer ? .failableContainer() : nil
         ]
@@ -86,11 +86,41 @@ extension DeclSyntax {
         )
     }
 
-    init(decoderWithCodingKeys codingKeys: CodingKeysDeclaration, properties: [PropertyDefinition], isPublic: Bool) {
+    init(decoderWithCodingKeys codingKeys: CodingKeysDeclaration, properties: [PropertyDefinition], isPublic: Bool, needsValidation: Bool) {
         self.init(stringLiteral:
             "\(isPublic ? "public " : "")init(from decoder: Decoder) throws { " +
-            "\(CodeBlockItemListSyntax(codingKeys.containerDeclarations(ofKind: .decode)).withTrailingTrivia(.newlines(2)))" +
-            "\(CodeBlockItemListSyntax(properties.map { $0.decodeStatement }).trimmed)" +
+            "\(CodeBlockItemListSyntax(codingKeys.containerDeclarations(ofKind: .decode)).withLeadingTrivia(.newline).withTrailingTrivia([]))" +
+            "\(CodeBlockItemListSyntax(properties.map { $0.decodeStatement }).withLeadingTrivia(.newlines(2)).withTrailingTrivia(.newline))" +
+            "\(needsValidation ? "\(CodeBlockItemSyntax.validationBlock.withLeadingTrivia(.newline).withTrailingTrivia(.newline))" : "")" +
+            "}"
+        )
+    }
+}
+
+extension AttributeSyntax {
+    var needsValidation: Bool {
+        guard 
+            case .argumentList(let argumentList) = arguments,
+            let needsValidationArgument = argumentList.first(where: { $0.label?.trimmedDescription == "needsValidation" }) 
+        else {
+            return false
+        }
+
+        let value = needsValidationArgument.expression.trimmedDescription
+
+        guard ["true", "false"].contains(value) else {
+            fatalError("Expected 'needsValidation' to be either 'true' or 'false'")
+        }
+
+        return value == "true"
+    }
+}
+
+private extension CodeBlockItemSyntax {
+    static var validationBlock: Self {
+        .init(stringLiteral:
+            "if !self.isValid {" +
+            "throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: \"Validation failed\"))" +
             "}"
         )
     }

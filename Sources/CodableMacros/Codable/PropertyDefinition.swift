@@ -59,6 +59,7 @@ struct PropertyDefinition: CustomDebugStringConvertible {
                 CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
                                     ".decode([\(dictionaryElementType.key): FailableContainer<\(dictionaryElementType.value)>].self, forKey: .\(codingPath.containerkey))" +
                                     ".compactMapValues { $0.wrappedValue }")
+                    .withLeadingTrivia(.newline)
             } else {
                 CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
                                     ".decode(\(type.name).self, forKey: .\(codingPath.containerkey))")

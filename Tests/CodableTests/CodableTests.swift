@@ -547,6 +547,52 @@ final class CodableTests: XCTestCase {
         )
     }
 
+    func testCodableMacro_whenValidationNeeded_includesValidationCode() throws {
+        assertMacroExpansion(
+            """
+            @Codable(needsValidation: true)
+            struct Foo {
+                let bar: String
+
+                var isValid: Bool { !bar.isEmpty }
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                let bar: String
+
+                var isValid: Bool { !bar.isEmpty }
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+                    bar = try container.decode(String.self, forKey: .bar)
+
+                    if !self.isValid {
+                        throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Validation failed"))
+                    }
+                }
+
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+
+                    try container.encode(bar, forKey: .bar)
+                }
+
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                }
+            }
+
+            extension Foo: Codable {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+
     func testCodableMacro_whenAppliedToActor_throwsError() throws {
         assertMacroExpansion(
             """
@@ -681,6 +727,7 @@ final class CodableTests: XCTestCase {
                     } catch {
                         optionalArray = nil
                     }
+
                     dict = try container.decode([String: FailableContainer<Int>].self, forKey: .dict).compactMapValues {
                         $0.wrappedValue
                     }
@@ -733,5 +780,4 @@ final class CodableTests: XCTestCase {
             macros: testMacros
         )
     }
-
 }

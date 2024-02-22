@@ -3,11 +3,11 @@
 
 @attached(extension, conformances: Codable)
 @attached(member, names: named(init(from:)), named(encode(to:)), named(CodingKeys), named(FailableContainer))
-public macro Codable() = #externalMacro(module: "CodableMacros", type: "CodableMacro")
+public macro Codable(needsValidation: Bool = false) = #externalMacro(module: "CodableMacros", type: "CodableMacro")
 
 @attached(extension, conformances: Decodable)
 @attached(member, names: named(init(from:)), named(CodingKeys), named(FailableContainer))
-public macro Decodable() = #externalMacro(module: "CodableMacros", type: "DecodableMacro")
+public macro Decodable(needsValidation: Bool = false) = #externalMacro(module: "CodableMacros", type: "DecodableMacro")
 
 @attached(extension, conformances: Encodable)
 @attached(member, names: named(encode(to:)), named(CodingKeys))

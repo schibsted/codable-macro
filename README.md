@@ -9,8 +9,7 @@ A Swift macro that can generate Codable implementations.
   - [x] Decoding from nested objects.
 - [x] Ignoring certain properties (by marking them with the `@CodableIgnored` attribute).
 - [x] Lossy coding.
-- [ ] Check for existing conformances/serialization implementation.
-- [x] Generate compiler errors.
+- [x] Validation on decoding (set `needsValidation` parameter of `@Decodable` or `@Codable` to `true` and provide the `var isValid: Bool { get }` property).
 
 ## Presentation
 
