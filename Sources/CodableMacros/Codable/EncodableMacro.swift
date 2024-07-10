@@ -57,22 +57,26 @@ extension EncodableMacro: MemberMacro {
             return []
         }
 
-        guard let codingKeys = CodingKeysDeclaration(paths: storedProperties.map { $0.codingPath }) else {
+        guard let rootCodingContainer = CodingContainer(paths: storedProperties.map { $0.codingPath }) else {
             fatalError("Failed to generate coding keys")
         }
 
         return [
-            DeclSyntax(encoderWithCodingKeys: codingKeys, properties: storedProperties, isPublic: declaration.isPublic),
-            try codingKeys.declaration
+            DeclSyntax(encoderWithCodingContainer: rootCodingContainer, properties: storedProperties, isPublic: declaration.isPublic),
+            try rootCodingContainer.codingKeysDeclaration
         ]
     }
 }
 
 extension DeclSyntax {
-    init(encoderWithCodingKeys codingKeys: CodingKeysDeclaration, properties: [PropertyDefinition], isPublic: Bool) {
+    init(encoderWithCodingContainer codingContainer: CodingContainer, properties: [PropertyDefinition], isPublic: Bool) {
+        let containerDeclarations = codingContainer
+            .allCodingContainers()
+            .map { $0.containerDeclaration(ofKind: .encode) }
+
         self.init(stringLiteral:
             "\(isPublic ? "public " : "")func encode(to encoder: Encoder) throws {" +
-            "\(CodeBlockItemListSyntax(codingKeys.containerDeclarations(ofKind: .encode)).withTrailingTrivia(.newlines(2)))" +
+            "\(CodeBlockItemListSyntax(containerDeclarations).withTrailingTrivia(.newlines(2)))" +
             "\(CodeBlockItemListSyntax(properties.map { $0.encodeStatement }).trimmed)" +
             "}"
         )

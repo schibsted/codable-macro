@@ -50,13 +50,28 @@ final class DecodableTests: XCTestCase {
 
                 public init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
-                    let beerContainer = try container.nestedContainer(keyedBy: CodingKeys.BeerCodingKeys.self, forKey: .beer)
-                    let roContainer = try container.nestedContainer(keyedBy: CodingKeys.RoCodingKeys.self, forKey: .ro)
-                    let roDuhContainer = try roContainer.nestedContainer(keyedBy: CodingKeys.RoCodingKeys.DuhCodingKeys.self, forKey: .duh)
 
-                    bar = try beerContainer.decode(String.self, forKey: .bar)
-                    fus = try beerContainer.decode(String.self, forKey: .fus)
-                    dah = try roDuhContainer.decode(String.self, forKey: .dah)
+                    do {
+                        let beerContainer = try container.nestedContainer(keyedBy: CodingKeys.BeerCodingKeys.self, forKey: .beer)
+                        bar = try beerContainer.decode(String.self, forKey: .bar)
+                    } catch {
+                        throw error
+                    }
+
+                    do {
+                        let beerContainer = try container.nestedContainer(keyedBy: CodingKeys.BeerCodingKeys.self, forKey: .beer)
+                        fus = try beerContainer.decode(String.self, forKey: .fus)
+                    } catch {
+                        throw error
+                    }
+
+                    do {
+                        let roContainer = try container.nestedContainer(keyedBy: CodingKeys.RoCodingKeys.self, forKey: .ro)
+                        let roDuhContainer = try roContainer.nestedContainer(keyedBy: CodingKeys.RoCodingKeys.DuhCodingKeys.self, forKey: .duh)
+                        dah = try roDuhContainer.decode(String.self, forKey: .dah)
+                    } catch {
+                        throw error
+                    }
 
                     do {
                         baz = try container.decode(Int.self, forKey: .baz)

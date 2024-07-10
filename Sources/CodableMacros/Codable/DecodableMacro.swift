@@ -60,13 +60,13 @@ extension DecodableMacro: MemberMacro {
         let shouldIncludeFailableContainer = storedProperties
             .contains(where: { $0.type.isArray || $0.type.isDictionary })
 
-        guard let codingKeys = CodingKeysDeclaration(paths: storedProperties.map { $0.codingPath }) else {
+        guard let rootCodingContainer = CodingContainer(paths: storedProperties.map { $0.codingPath }) else {
             fatalError("Failed to generate coding keys")
         }
 
         return [
-            DeclSyntax(decoderWithCodingKeys: codingKeys, properties: storedProperties, isPublic: declaration.isPublic, needsValidation: node.needsValidation),
-            try codingKeys.declaration,
+            DeclSyntax(decoderWithCodingContainer: rootCodingContainer, properties: storedProperties, isPublic: declaration.isPublic, needsValidation: node.needsValidation),
+            try rootCodingContainer.codingKeysDeclaration,
             shouldIncludeFailableContainer ? .failableContainer() : nil
         ]
         .compactMap { $0 }
@@ -86,12 +86,27 @@ extension DeclSyntax {
         )
     }
 
-    init(decoderWithCodingKeys codingKeys: CodingKeysDeclaration, properties: [PropertyDefinition], isPublic: Bool, needsValidation: Bool) {
+    init(decoderWithCodingContainer codingContainer: CodingContainer, properties: [PropertyDefinition], isPublic: Bool, needsValidation: Bool) {
+        let rootCodingContainerDeclaration = codingContainer.containerDeclaration(ofKind: .decode)
+            .withLeadingTrivia(.newline)
+            .withTrailingTrivia([])
+
+        let propertyDecodeStatements = properties
+            .map { $0.decodeStatement(rootCodingContainer: codingContainer) }
+        
+        let propertyDecodeBlock = CodeBlockItemListSyntax(propertyDecodeStatements)
+            .withLeadingTrivia(.newlines(2))
+            .withTrailingTrivia(.newline)
+
+        let validationBlock = needsValidation
+            ? "\(CodeBlockItemSyntax.validationBlock.withLeadingTrivia(.newline).withTrailingTrivia(.newline))"
+            : ""
+
         self.init(stringLiteral:
             "\(isPublic ? "public " : "")init(from decoder: Decoder) throws { " +
-            "\(CodeBlockItemListSyntax(codingKeys.containerDeclarations(ofKind: .decode)).withLeadingTrivia(.newline).withTrailingTrivia([]))" +
-            "\(CodeBlockItemListSyntax(properties.map { $0.decodeStatement }).withLeadingTrivia(.newlines(2)).withTrailingTrivia(.newline))" +
-            "\(needsValidation ? "\(CodeBlockItemSyntax.validationBlock.withLeadingTrivia(.newline).withTrailingTrivia(.newline))" : "")" +
+            "\(rootCodingContainerDeclaration)" +
+            "\(propertyDecodeBlock)" +
+            "\(validationBlock)" +
             "}"
         )
     }

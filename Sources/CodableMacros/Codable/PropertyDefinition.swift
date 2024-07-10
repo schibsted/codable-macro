@@ -49,8 +49,12 @@ struct PropertyDefinition: CustomDebugStringConvertible {
         (isImmutable && defaultValue != nil) // Assigning an immutable property with a default value is a compiler error
     }
 
-    var decodeStatement: CodeBlockItemSyntax {
-        let decodeBlock =
+    func decodeStatement(rootCodingContainer: CodingContainer) -> CodeBlockItemSyntax {
+        let nestedContainerDeclarations = rootCodingContainer
+            .nestedCodingContainers(along: codingPath)
+            .map { $0.containerDeclaration(ofKind: .decode) }
+
+        let decodeStatement =
             if let arrayElementType = type.arrayElementType {
                 CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
                                     ".decode([FailableContainer<\(arrayElementType)>].self, forKey: .\(codingPath.containerkey))" +
@@ -65,11 +69,13 @@ struct PropertyDefinition: CustomDebugStringConvertible {
                                     ".decode(\(type.name).self, forKey: .\(codingPath.containerkey))")
             }
 
-        var errorHandlingBlock: CodeBlockItemSyntax? {
+        var errorHandlingStatement: CodeBlockItemSyntax? {
             let statement: String? = if let defaultValue {
                 "\(name) = \(defaultValue)"
             } else if type.isOptional {
                 "\(name) = nil"
+            } else if !nestedContainerDeclarations.isEmpty {
+                "throw error"
             } else {
                 nil
             }
@@ -78,12 +84,14 @@ struct PropertyDefinition: CustomDebugStringConvertible {
                 .map { CodeBlockItemSyntax(stringLiteral: $0) }
         }
 
-        return if let errorHandlingBlock {
-            CodeBlockItemSyntax(stringLiteral: "do { \(decodeBlock) } catch { \(errorHandlingBlock) }")
+        if let errorHandlingStatement {
+            let decodeBlock = CodeBlockItemListSyntax(nestedContainerDeclarations + [decodeStatement])
+
+            return CodeBlockItemSyntax(stringLiteral: "do { \(decodeBlock) } catch { \(errorHandlingStatement) }")
                 .withLeadingTrivia(.newline)
                 .withTrailingTrivia(.newline)
         } else {
-            decodeBlock
+            return decodeStatement
                 .withTrailingTrivia(.newline)
         }
     }

@@ -3,10 +3,11 @@ import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 import Foundation
 
-struct CodingKeysDeclaration {
+final class CodingContainer {
     let name: String?
     let cases: [String]
-    let nestedKeys: [CodingKeysDeclaration]
+    let nestedContainers: [CodingContainer]
+    weak var parent: CodingContainer?
 
     var sortingKey: String { name ?? "" }
 
@@ -16,7 +17,7 @@ struct CodingKeysDeclaration {
         self.name = name
 
         var cases: [String] = []
-        var nestedKeys: [CodingKeysDeclaration] = []
+        var nestedContainers: [CodingContainer] = []
 
         Dictionary(grouping: paths, by: { $0.firstComponent })
             .forEach { (caseName: String, codingPaths: [CodingPath]) in
@@ -30,26 +31,44 @@ struct CodingKeysDeclaration {
                     .filter { !$0.isTerminal }
                     .map { $0.droppingFirstComponent() }
 
-                if let keys = CodingKeysDeclaration(name: caseName, paths: nestedPaths) {
-                    nestedKeys.append(keys)
+                if let keys = CodingContainer(name: caseName, paths: nestedPaths) {
+                    nestedContainers.append(keys)
                     cases.append(caseName)
                 }
             }
 
         self.cases = cases.sorted()
-        self.nestedKeys = nestedKeys.sorted(by: { $0.sortingKey < $1.sortingKey })
+        self.nestedContainers = nestedContainers.sorted(by: { $0.sortingKey < $1.sortingKey })
+
+        nestedContainers.forEach { $0.parent = self }
     }
 
-    var typeName: String { "\(name?.uppercasingFirstLetter ?? "")CodingKeys" }
+    var typeName: String {
+        "\(name?.uppercasingFirstLetter ?? "")CodingKeys"
+    }
 
-    var declaration: DeclSyntax {
+    var fullyQualifiedTypeName: String {
+        [parent?.fullyQualifiedTypeName, typeName]
+            .compactMap { $0 }
+            .joined(separator: ".")
+    }
+
+    var containerVariableName: String {
+        if let parent, let name {
+            "\(parent.containerVariableName.dropLast("container".count))\(name.uppercasingFirstLetter)Container".lowercasingFirstLetter
+        } else {
+            "container"
+        }
+    }
+
+    var codingKeysDeclaration: DeclSyntax {
         get throws {
             let caseDeclaration = MemberBlockItemSyntax(
                 decl: try EnumCaseDeclSyntax("case \(raw: cases.joined(separator: ", "))")
             )
 
-            let nestedTypeDeclarations = try nestedKeys
-                .map { try $0.declaration }
+            let nestedTypeDeclarations = try nestedContainers
+                .map { try $0.codingKeysDeclaration }
                 .map { MemberBlockItemSyntax(decl: $0) }
 
             let allMembers = ([caseDeclaration] + nestedTypeDeclarations)
@@ -64,39 +83,31 @@ struct CodingKeysDeclaration {
         }
     }
 
-    func containerDeclarations(
-        ofKind containerKind: ContainerKind,
-        parentContainerVariableName: String? = nil,
-        parentContainerTypeName: String? = nil
-    ) -> [CodeBlockItemSyntax] {
-        let containerVariableName: String
-        let containerTypeName: String
+    func containerDeclaration(ofKind containerKind: ContainerKind) -> CodeBlockItemSyntax {
         let declarationCode: String
 
-        if let parentContainerVariableName, let parentContainerTypeName, let name {
-            containerVariableName = "\(parentContainerVariableName.dropLast("container".count))\(name.uppercasingFirstLetter)Container".lowercasingFirstLetter
-            containerTypeName = "\(parentContainerTypeName).\(typeName)"
-            declarationCode = "\(containerKind.declarationKeyword) \(containerVariableName) = \(containerKind.tryPrefix)\(parentContainerVariableName).nestedContainer(keyedBy: \(containerTypeName).self, forKey: .\(name))"
+        if let parent, let name {
+            declarationCode = "\(containerKind.declarationKeyword) \(containerVariableName) = \(containerKind.tryPrefix)\(parent.containerVariableName).nestedContainer(keyedBy: \(fullyQualifiedTypeName).self, forKey: .\(name))"
         } else {
-            containerVariableName = "container"
-            containerTypeName = typeName
-            declarationCode = "\(containerKind.declarationKeyword) \(containerVariableName) = \(containerKind.tryPrefix)\(containerKind.coderName).container(keyedBy: \(containerTypeName).self)"
+            declarationCode = "\(containerKind.declarationKeyword) \(containerVariableName) = \(containerKind.tryPrefix)\(containerKind.coderName).container(keyedBy: \(fullyQualifiedTypeName).self)"
         }
 
-        let containerDeclaration = CodeBlockItemSyntax(stringLiteral: declarationCode)
+        return CodeBlockItemSyntax(stringLiteral: declarationCode)
             .withTrailingTrivia(.newline)
+    }
 
-        let nestedContainerDeclarations = nestedKeys
-            .map {
-                $0.containerDeclarations(
-                    ofKind: containerKind,
-                    parentContainerVariableName: containerVariableName,
-                    parentContainerTypeName: containerTypeName
-                )
-            }
+    func nestedCodingContainers(along codingPath: CodingPath) -> [CodingContainer] {
+        if let nestedContainer = nestedContainers.first(where: { $0.name == codingPath.firstComponent }) {
+            [nestedContainer] + nestedContainer.nestedCodingContainers(along: codingPath.droppingFirstComponent())
+        } else {
+            []
+        }
+    }
+
+    func allCodingContainers() -> [CodingContainer] {
+        [self] + nestedContainers
+            .map { $0.allCodingContainers() }
             .joined()
-
-        return [containerDeclaration] + nestedContainerDeclarations
     }
 }
 

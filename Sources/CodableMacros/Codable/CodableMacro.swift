@@ -60,14 +60,14 @@ extension CodableMacro: MemberMacro {
         let shouldIncludeFailableContainer = storedProperties
             .contains(where: { $0.type.isArray || $0.type.isDictionary })
 
-        guard let codingKeys = CodingKeysDeclaration(paths: storedProperties.map { $0.codingPath }) else {
+        guard let codingContainer = CodingContainer(paths: storedProperties.map { $0.codingPath }) else {
             fatalError("Failed to generate coding keys")
         }
 
         return [
-            DeclSyntax(decoderWithCodingKeys: codingKeys, properties: storedProperties, isPublic: declaration.isPublic, needsValidation: node.needsValidation),
-            DeclSyntax(encoderWithCodingKeys: codingKeys, properties: storedProperties, isPublic: declaration.isPublic),
-            try codingKeys.declaration,
+            DeclSyntax(decoderWithCodingContainer: codingContainer, properties: storedProperties, isPublic: declaration.isPublic, needsValidation: node.needsValidation),
+            DeclSyntax(encoderWithCodingContainer: codingContainer, properties: storedProperties, isPublic: declaration.isPublic),
+            try codingContainer.codingKeysDeclaration,
             shouldIncludeFailableContainer ? .failableContainer() : nil
         ]
         .compactMap { $0 }
