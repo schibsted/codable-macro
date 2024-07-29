@@ -343,6 +343,30 @@ final class DecodableTests: XCTestCase {
         )
     }
 
+    func testDecodableMacro_whenPropertyTypeIsOmitted_throwsError() throws {
+        assertMacroExpansion(
+            """
+            @Decodable
+            struct Foo {
+                var bar = false
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                var bar = false
+            }
+
+            extension Foo: Decodable {
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: CodableMacroError.propertyTypeNotSpecified(propertyName: "bar").description, line: 1, column: 1)
+            ],
+            macros: testMacros
+        )
+    }
+
     func testDecodableMacro_whenAppliedToActor_throwsError() throws {
         assertMacroExpansion(
             """

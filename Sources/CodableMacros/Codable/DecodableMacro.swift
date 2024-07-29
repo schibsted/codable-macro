@@ -49,7 +49,7 @@ extension DecodableMacro: MemberMacro {
             return []
         }
 
-        let storedProperties: [PropertyDefinition] = try declaration.memberBlock.members
+        let storedProperties = try declaration.memberBlock.members
             .compactMap { try PropertyDefinition(declaration: $0.decl) }
             .filter { !$0.isExcludedFromCodable }
 

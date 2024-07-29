@@ -18,10 +18,13 @@ struct PropertyDefinition: CustomDebugStringConvertible {
             let property = declaration.as(VariableDeclSyntax.self),
             let patternBinding = property.bindings.first,
             patternBinding.accessorBlock == nil,
-            let name = patternBinding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
-            let type = patternBinding.typeAnnotation.flatMap({ TypeDefinition(type: $0.type) })
+            let name = patternBinding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text
         else {
             return nil
+        }
+
+        guard let type = patternBinding.typeAnnotation.flatMap({ TypeDefinition(type: $0.type) }) else {
+            throw CodableMacroError.propertyTypeNotSpecified(propertyName: name)
         }
 
         let propertyAttributes = property.attributes
