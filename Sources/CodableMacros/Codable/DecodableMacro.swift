@@ -58,7 +58,7 @@ extension DecodableMacro: MemberMacro {
         }
 
         let shouldIncludeFailableContainer = storedProperties
-            .contains(where: { $0.type.isArray || $0.type.isDictionary })
+            .contains(where: { $0.type.isCollection })
 
         guard let rootCodingContainer = CodingContainer(paths: storedProperties.map { $0.codingPath }) else {
             fatalError("Failed to generate coding keys")

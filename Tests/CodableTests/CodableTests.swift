@@ -210,47 +210,6 @@ final class CodableTests: XCTestCase {
         )
     }
 
-    func testCodableMacro_whenPropertyTypeHasGenerics() throws {
-        assertMacroExpansion(
-            """
-            @Codable
-            struct Foo {
-                var bar: Array<String>?
-            }
-            """,
-            expandedSource: """
-
-            struct Foo {
-                var bar: Array<String>?
-
-                init(from decoder: Decoder) throws {
-                    let container = try decoder.container(keyedBy: CodingKeys.self)
-
-                    do {
-                        bar = try container.decode(Array<String>.self, forKey: .bar)
-                    } catch {
-                        bar = nil
-                    }
-                }
-
-                func encode(to encoder: Encoder) throws {
-                    var container = encoder.container(keyedBy: CodingKeys.self)
-
-                    try container.encodeIfPresent(bar, forKey: .bar)
-                }
-
-                enum CodingKeys: String, CodingKey {
-                    case bar
-                }
-            }
-
-            extension Foo: Codable {
-            }
-            """,
-            macros: testMacros
-        )
-    }
-
     func testCodableMacro_withArrayProperty_generatesHelperContainerType() throws {
         assertMacroExpansion(
             """

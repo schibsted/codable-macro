@@ -22,6 +22,8 @@ public struct Foo: Equatable {
 
     var optionalArray: [Int]?
 
+    var someSet: Set<String>
+
     var dict: [String: Int]
 
     @CodableIgnored
@@ -46,9 +48,9 @@ struct SomeEncodable {
 }
 
 let subjects: [String: Foo] = [
-    "vanilla": Foo(bar: "bar", fus: "hello", dah: "world", baz: 1, qux: [.two], array: ["a"], optionalArray: [1, 2], dict: [:]),
-    "with optional": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: [.two], array: [], optionalArray: nil, dict: [:]),
-    "invalid": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: [.two], array: [], optionalArray: [], dict: [:])
+    "vanilla": Foo(bar: "bar", fus: "hello", dah: "world", baz: 1, qux: [.two], array: ["a"], optionalArray: [1, 2], someSet: ["a", "b"], dict: [:]),
+    "with optional": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: [.two], array: [], optionalArray: nil, someSet: [], dict: [:]),
+    "invalid": Foo(bar: "bar", fus: "hello", dah: "world", baz: nil, qux: [.two], array: [], optionalArray: [], someSet: [], dict: [:])
 ]
 
 print("\nENCODING AND DECODING BACK:")
@@ -86,6 +88,7 @@ let jsons = [
     "booz": 1,
     "qox": ["1", "two"],
     "optionalArray": [1, 2, 3],
+    "someSet": ["a", "a", "a"],
     "dict": {
         "foo": 42,
         "fii": "not an Int"

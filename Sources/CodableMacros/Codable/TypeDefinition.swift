@@ -6,15 +6,53 @@ import Foundation
 indirect enum TypeDefinition: CustomStringConvertible {
     case optional(wrappedType: TypeDefinition)
     case array(elementType: String)
+    case set(elementType: String)
     case dictionary(keyType: String, valueType: String)
     case identifier(name: String)
 
     init?(type: TypeSyntax) {
         if let identifier = type.as(IdentifierTypeSyntax.self) {
-            let name = [identifier.name.text, identifier.genericArgumentClause?.trimmedDescription]
-                .compactMap { $0 }
-                .joined()
-            self = .identifier(name: name)
+            let typeName = identifier.name.text
+
+            if let genericArgumentClause = identifier.genericArgumentClause {
+                let genericParameterTypes = genericArgumentClause.arguments.map { $0.argument }
+                let genericParameterNames = genericArgumentClause.arguments.map { $0.trimmedDescription }
+                
+                switch typeName {
+                case "Array":
+                    guard let elementType = genericParameterNames.first else {
+                        return nil
+                    }
+                    
+                    self = .array(elementType: elementType)
+
+                case "Set":
+                    guard let elementType = genericParameterNames.first else {
+                        return nil
+                    }
+
+                    self = .set(elementType: elementType)
+
+                case "Dictionary":
+                    guard genericParameterNames.count == 2 else {
+                        return nil
+                    }
+
+                    self = .dictionary(keyType: genericParameterNames[0], valueType: genericParameterNames[1])
+                
+                case "Optional":
+                    guard let wrappedType = genericParameterTypes.first.flatMap({ TypeDefinition(type: $0) }) else {
+                        return nil
+                    }
+
+                    self = .optional(wrappedType: wrappedType)
+
+                default:
+                    self = .identifier(name: "\(typeName)\(genericArgumentClause.trimmedDescription)")
+                }
+            } else {
+                self = .identifier(name: typeName)
+            }
         } else if let optional = type.as(OptionalTypeSyntax.self),
                   let wrappedDeclaration = TypeDefinition(type: optional.wrappedType) {
             self = .optional(wrappedType: wrappedDeclaration)
@@ -36,6 +74,8 @@ indirect enum TypeDefinition: CustomStringConvertible {
             name
         case let .array(elementType):
             "[\(elementType)]"
+        case let .set(elementType):
+            "Set<\(elementType)>"
         case .dictionary(let keyType, let elementType):
             "[\(keyType): \(elementType)]"
         case let .optional(wrappedType):
@@ -43,12 +83,15 @@ indirect enum TypeDefinition: CustomStringConvertible {
         }
     }
 
-    var isArray: Bool {
-        arrayElementType != nil
-    }
-
-    var isDictionary: Bool {
-        dictionaryElementType != nil
+    var isCollection: Bool {
+        switch self {
+        case .array, .set, .dictionary:
+            true
+        case let .optional(wrappedType):
+            wrappedType.isCollection
+        default:
+            false
+        }
     }
 
     var arrayElementType: String? {
@@ -57,7 +100,18 @@ indirect enum TypeDefinition: CustomStringConvertible {
             elementType
         case let .optional(wrappedType):
             wrappedType.arrayElementType
-        case .identifier, .dictionary:
+        default:
+            nil
+        }
+    }
+
+    var setElementType: String? {
+        switch self {
+        case let .set(elementType):
+            elementType
+        case let .optional(wrappedType):
+            wrappedType.setElementType
+        default:
             nil
         }
     }
@@ -68,17 +122,17 @@ indirect enum TypeDefinition: CustomStringConvertible {
             (keyType, elementType)
         case let .optional(wrappedType):
             wrappedType.dictionaryElementType
-        case .identifier, .array:
+        default:
             nil
         }
     }
 
     var isOptional: Bool {
         switch self {
-        case .identifier, .array, .dictionary:
-            false
         case .optional:
             true
+        default:
+            false
         }
     }
 
@@ -90,9 +144,10 @@ indirect enum TypeDefinition: CustomStringConvertible {
             "\(wrappedType.description)?"
         case let .array(elementType):
             "[\(elementType.description)]"
+        case let .set(elementType):
+            "Set<\(elementType.description)>"
         case .dictionary(let keyType, let elementType):
             "[\(keyType.description): \(elementType.description)]"
         }
     }
 }
-

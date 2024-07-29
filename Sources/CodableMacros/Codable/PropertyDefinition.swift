@@ -59,6 +59,10 @@ struct PropertyDefinition: CustomDebugStringConvertible {
                 CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
                                     ".decode([FailableContainer<\(arrayElementType)>].self, forKey: .\(codingPath.containerkey))" +
                                     ".compactMap { $0.wrappedValue }")
+            } else if let setElementType = type.setElementType {
+                CodeBlockItemSyntax(stringLiteral: "\(name) = Set(try \(codingPath.codingContainerName)" +
+                                    ".decode([FailableContainer<\(setElementType)>].self, forKey: .\(codingPath.containerkey))" +
+                                    ".compactMap { $0.wrappedValue })")
             } else if let dictionaryElementType = type.dictionaryElementType {
                 CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
                                     ".decode([\(dictionaryElementType.key): FailableContainer<\(dictionaryElementType.value)>].self, forKey: .\(codingPath.containerkey))" +

@@ -181,6 +181,129 @@ final class DecodableTests: XCTestCase {
         )
     }
 
+    func testDecodableMacro_whenDecodingArray() throws {
+        assertMacroExpansion(
+            """
+            @Decodable
+            struct Foo {
+                var bar: [String]
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                var bar: [String]
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+                    bar = try container.decode([FailableContainer<String>].self, forKey: .bar).compactMap {
+                        $0.wrappedValue
+                    }
+                }
+
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                }
+
+                private struct FailableContainer<T>: Decodable where T: Decodable {
+                    var wrappedValue: T?
+
+                    init(from decoder: Decoder) throws {
+                        wrappedValue = try? decoder.singleValueContainer().decode(T.self)
+                    }
+                }
+            }
+
+            extension Foo: Decodable {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    func testDecodableMacro_whenDecodingSet() throws {
+        assertMacroExpansion(
+            """
+            @Decodable
+            struct Foo {
+                var bar: Set<String>
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                var bar: Set<String>
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+                    bar = Set(try container.decode([FailableContainer<String>].self, forKey: .bar).compactMap {
+                            $0.wrappedValue
+                        })
+                }
+
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                }
+
+                private struct FailableContainer<T>: Decodable where T: Decodable {
+                    var wrappedValue: T?
+
+                    init(from decoder: Decoder) throws {
+                        wrappedValue = try? decoder.singleValueContainer().decode(T.self)
+                    }
+                }
+            }
+
+            extension Foo: Decodable {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    func testDecodableMacro_whenDecodingDictionary() throws {
+        assertMacroExpansion(
+            """
+            @Decodable
+            struct Foo {
+                var bar: [String: Int]
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                var bar: [String: Int]
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+                    bar = try container.decode([String: FailableContainer<Int>].self, forKey: .bar).compactMapValues {
+                        $0.wrappedValue
+                    }
+                }
+
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                }
+
+                private struct FailableContainer<T>: Decodable where T: Decodable {
+                    var wrappedValue: T?
+
+                    init(from decoder: Decoder) throws {
+                        wrappedValue = try? decoder.singleValueContainer().decode(T.self)
+                    }
+                }
+            }
+
+            extension Foo: Decodable {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
     func testDecodableMacro_whenValidationNeeded_includesValidationCode() throws {
         assertMacroExpansion(
             """

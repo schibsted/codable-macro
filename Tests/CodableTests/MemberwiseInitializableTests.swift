@@ -181,7 +181,7 @@ final class MemberwiseInitializableTests: XCTestCase {
                 init(
                     something: String? = "default value",
                     p1: String? = nil,
-                    p2: Optional<String> = nil,
+                    p2: String? = nil,
                     p3: String
                 ) {
                     self.something = something
