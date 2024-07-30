@@ -29,9 +29,19 @@ public struct Foo: Equatable {
     @CodableIgnored
     var neverMindMe: String = "some value"
 
+    @CustomDecoded // needs to be all caps
+    var specialProperty: String?
+
     @Codable
     public enum Qux: String, Equatable {
         case one, two
+    }
+
+    private static func decodeSpecialProperty(from decoder: Decoder) throws -> String {
+        try decoder
+            .container(keyedBy: CodingKeys.self)
+            .decode(String.self, forKey: .specialProperty)
+            .uppercased()
     }
 
     private var isValid: Bool { optionalArray?.isEmpty != true }
@@ -89,6 +99,7 @@ let jsons = [
     "qox": ["1", "two"],
     "optionalArray": [1, 2, 3],
     "someSet": ["a", "a", "a"],
+    "specialProperty": "some value",
     "dict": {
         "foo": 42,
         "fii": "not an Int"

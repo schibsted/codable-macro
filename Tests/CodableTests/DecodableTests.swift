@@ -10,7 +10,8 @@ final class DecodableTests: XCTestCase {
         "Decodable": DecodableMacro.self,
         "Encodable": EncodableMacro.self,
         "CodableKey": CodableKeyMacro.self,
-        "CodableIgnored": CodableIgnoredMacro.self
+        "CodableIgnored": CodableIgnoredMacro.self,
+        "CustomDecoded": CustomDecodedMacro.self
     ]
 
     func testDecodableMacro_withNonTrivialType() throws {
@@ -339,6 +340,99 @@ final class DecodableTests: XCTestCase {
             extension Foo: Decodable {
             }
             """,
+            macros: testMacros
+        )
+    }
+
+    func testDecodableMacro_whenCustomDecodedApplied_callsCustomDecodingFunction() throws {
+        assertMacroExpansion(
+            """
+            @Decodable
+            struct Foo {
+                @CustomDecoded let specialProperty: String
+
+                static func decodeSpecialProperty(from decoder: Decoder) throws -> Bool { "custom decoded value" }
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                let specialProperty: String
+
+                static func decodeSpecialProperty(from decoder: Decoder) throws -> Bool { "custom decoded value" }
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+                    specialProperty = try Self.decodeSpecialProperty(from: decoder)
+                }
+
+                enum CodingKeys: String, CodingKey {
+                    case specialProperty
+                }
+            }
+            
+            extension Foo: Decodable {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    func testDecodableMacro_whenCustomDecodedAppliedToImplicitlyIgnoredProperty_throwsError() throws {
+        assertMacroExpansion(
+            """
+            @Decodable
+            struct Foo {
+                @CustomDecoded let specialProperty: String = ""
+
+                static func decodeSpecialProperty(from decoder: Decoder) throws -> Bool { "custom decoded value" }
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                let specialProperty: String = ""
+
+                static func decodeSpecialProperty(from decoder: Decoder) throws -> Bool { "custom decoded value" }
+            }
+            
+            extension Foo: Decodable {
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: CodableMacroError.customDecodingNotApplicableToExcludedProperty(propertyName: "specialProperty").description, line: 1, column: 1)
+            ],
+            macros: testMacros
+        )
+    }
+
+
+    func testDecodableMacro_whenCustomDecodedAppliedToExplicitlyIgnoredProperty_throwsError() throws {
+        assertMacroExpansion(
+            """
+            @Decodable
+            struct Foo {
+                @CustomDecoded @CodableIgnored let specialProperty: String
+
+                static func decodeSpecialProperty(from decoder: Decoder) throws -> Bool { "custom decoded value" }
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                
+                let specialProperty: String
+
+                static func decodeSpecialProperty(from decoder: Decoder) throws -> Bool { "custom decoded value" }
+            }
+            
+            extension Foo: Decodable {
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: CodableMacroError.customDecodingNotApplicableToExcludedProperty(propertyName: "specialProperty").description, line: 1, column: 1)
+            ],
             macros: testMacros
         )
     }

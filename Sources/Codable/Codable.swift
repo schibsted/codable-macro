@@ -19,6 +19,9 @@ public macro CodableKey(_ key: String) = #externalMacro(module: "CodableMacros",
 @attached(peer)
 public macro CodableIgnored() = #externalMacro(module: "CodableMacros", type: "CodableIgnoredMacro")
 
+@attached(peer)
+public macro CustomDecoded() = #externalMacro(module: "CodableMacros", type: "CustomDecodedMacro")
+
 @attached(member, names: named(init))
 public macro MemberwiseInitializable(_ accessLevel: MemberAccessLevel? = nil) = #externalMacro(module: "CodableMacros", type: "MemberwiseInitializableMacro")
 

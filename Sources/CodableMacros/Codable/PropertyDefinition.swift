@@ -13,6 +13,9 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     // marked with @CodableIgnored
     let isExplicitlyExcludedFromCodable: Bool
 
+    // marked with @CustomDecoded
+    let needsCustomDecoding: Bool
+
     init?(declaration: DeclSyntax) throws {
         guard
             let property = declaration.as(VariableDeclSyntax.self),
@@ -42,6 +45,11 @@ struct PropertyDefinition: CustomDebugStringConvertible {
         self.defaultValue = patternBinding.initializer?.value.trimmedDescription
         self.isImmutable = property.isImmutable
         self.isExplicitlyExcludedFromCodable = propertyAttributes.contains(where: { $0.isCodableIgnored })
+        self.needsCustomDecoding = propertyAttributes.contains(where: { $0.isCustomDecoded })
+
+        if isExcludedFromCodable && needsCustomDecoding {
+            throw CodableMacroError.customDecodingNotApplicableToExcludedProperty(propertyName: name)
+        }
     }
 
     var isExcludedFromCodable: Bool {
@@ -52,13 +60,20 @@ struct PropertyDefinition: CustomDebugStringConvertible {
         (isImmutable && defaultValue != nil) // Assigning an immutable property with a default value is a compiler error
     }
 
+    var customDecodeFunctionName: String {
+        "decode\(name.uppercasingFirstLetter)"
+    }
+
     func decodeStatement(rootCodingContainer: CodingContainer) -> CodeBlockItemSyntax {
         let nestedContainerDeclarations = rootCodingContainer
             .nestedCodingContainers(along: codingPath)
             .map { $0.containerDeclaration(ofKind: .decode) }
 
         let decodeStatement =
-            if let arrayElementType = type.arrayElementType {
+            if needsCustomDecoding {
+                CodeBlockItemSyntax(stringLiteral: "\(name) = try Self" +
+                                    ".\(customDecodeFunctionName)(from: decoder)")
+            } else if let arrayElementType = type.arrayElementType {
                 CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
                                     ".decode([FailableContainer<\(arrayElementType)>].self, forKey: .\(codingPath.containerkey))" +
                                     ".compactMap { $0.wrappedValue }")

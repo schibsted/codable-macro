@@ -24,6 +24,10 @@ extension AttributeSyntax {
         attributeName.as(IdentifierTypeSyntax.self)?.trimmedDescription == CodableIgnoredMacro.attributeName
     }
 
+    var isCustomDecoded: Bool {
+        attributeName.as(IdentifierTypeSyntax.self)?.trimmedDescription == CustomDecodedMacro.attributeName
+    }
+
     var isCodableKey: Bool {
         attributeName.as(IdentifierTypeSyntax.self)?.trimmedDescription == CodableKeyMacro.attributeName
     }

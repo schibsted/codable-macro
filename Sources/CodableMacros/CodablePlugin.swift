@@ -9,6 +9,7 @@ struct CodablePlugin: CompilerPlugin {
         EncodableMacro.self,
         CodableKeyMacro.self,
         CodableIgnoredMacro.self,
+        CustomDecodedMacro.self,
         MemberwiseInitializableMacro.self
     ]
 }
