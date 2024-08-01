@@ -30,6 +30,7 @@ final class EncodableTests: XCTestCase {
 
                 @CodableIgnored public var neverMindMe: String = "some value"
                 public let immutable: Int = 0
+                public static var booleanValue = false
             }
             """,
             expandedSource: """
@@ -47,6 +48,7 @@ final class EncodableTests: XCTestCase {
 
                 public var neverMindMe: String = "some value"
                 public let immutable: Int = 0
+                public static var booleanValue = false
 
                 public func encode(to encoder: Encoder) throws {
                     var container = encoder.container(keyedBy: CodingKeys.self)
@@ -119,6 +121,29 @@ final class EncodableTests: XCTestCase {
             expandedSource: """
 
             struct Foo {
+            }
+
+            extension Foo: Encodable {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    func testEncodableMacro_whenPropertyIsStatic_isIgnored() throws {
+        assertMacroExpansion(
+            """
+            @Encodable
+            struct Foo {
+                static var foo: Int = 0
+                static var bar = false
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                static var foo: Int = 0
+                static var bar = false
             }
 
             extension Foo: Encodable {

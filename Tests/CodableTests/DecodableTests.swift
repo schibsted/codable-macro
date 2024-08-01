@@ -31,6 +31,7 @@ final class DecodableTests: XCTestCase {
 
                 @CodableIgnored public var neverMindMe: String = "some value"
                 public let immutable: Int = 0
+                public static var booleanValue = false
             }
             """,
             expandedSource: """
@@ -48,6 +49,7 @@ final class DecodableTests: XCTestCase {
 
                 public var neverMindMe: String = "some value"
                 public let immutable: Int = 0
+                public static var booleanValue = false
 
                 public init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -457,6 +459,29 @@ final class DecodableTests: XCTestCase {
             diagnostics: [
                 DiagnosticSpec(message: CodableMacroError.propertyTypeNotSpecified(propertyName: "bar").description, line: 1, column: 1)
             ],
+            macros: testMacros
+        )
+    }
+
+    func testDecodableMacro_whenPropertyIsStatic_isIgnored() throws {
+        assertMacroExpansion(
+            """
+            @Decodable
+            struct Foo {
+                static var foo: Int = 0
+                static var bar = false
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                static var foo: Int = 0
+                static var bar = false
+            }
+
+            extension Foo: Decodable {
+            }
+            """,
             macros: testMacros
         )
     }

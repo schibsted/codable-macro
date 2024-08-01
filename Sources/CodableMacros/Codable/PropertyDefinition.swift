@@ -19,6 +19,7 @@ struct PropertyDefinition: CustomDebugStringConvertible {
     init?(declaration: DeclSyntax) throws {
         guard
             let property = declaration.as(VariableDeclSyntax.self),
+            !property.isStatic,
             let patternBinding = property.bindings.first,
             patternBinding.accessorBlock == nil,
             let name = patternBinding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text

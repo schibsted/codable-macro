@@ -7,6 +7,10 @@ extension VariableDeclSyntax {
     var isImmutable: Bool {
         bindingSpecifier.trimmedDescription == "let"
     }
+
+    var isStatic: Bool {
+        modifiers.contains(where: { $0.trimmedDescription == "static" })
+    }
 }
 
 extension AttributeListSyntax {
