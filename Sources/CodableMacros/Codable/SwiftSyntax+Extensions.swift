@@ -5,11 +5,11 @@ import Foundation
 
 extension VariableDeclSyntax {
     var isImmutable: Bool {
-        bindingSpecifier.trimmedDescription == "let"
+        bindingSpecifier.tokenKind == .keyword(.let)
     }
 
     var isStatic: Bool {
-        modifiers.contains(where: { $0.trimmedDescription == "static" })
+        modifiers.contains(where: { $0.name.tokenKind == .keyword(.static) })
     }
 }
 
@@ -59,8 +59,8 @@ extension SyntaxProtocol {
 
 extension DeclGroupSyntax {
     var isPublic: Bool {
-        modifiers
-            .contains(where: { ["public", "open"].contains($0.trimmedDescription) })
+        let keywords: [TokenKind] = [.keyword(.public), .keyword(.open)]
+        return modifiers.contains(where: { keywords.contains($0.name.tokenKind) })
     }
 }
 

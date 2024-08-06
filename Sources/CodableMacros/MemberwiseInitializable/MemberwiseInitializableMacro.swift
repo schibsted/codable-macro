@@ -43,8 +43,9 @@ extension MemberwiseInitializableMacro: MemberMacro {
             }
 
             accessLevel = level
-        } else if let typeAccessLevel = declaration.modifiers.first?.trimmedDescription {
-            accessLevel = typeAccessLevel == "open" ? "public" : typeAccessLevel
+        } else if let firstModifier = declaration.modifiers.first {
+            let isOpen = firstModifier.name.tokenKind == .keyword(.open)
+            accessLevel = isOpen ? "public" : firstModifier.trimmedDescription
         } else {
             accessLevel = nil
         }
