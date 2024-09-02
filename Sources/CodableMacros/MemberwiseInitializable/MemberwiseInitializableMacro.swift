@@ -75,7 +75,7 @@ extension MemberwiseInitializableMacro: MemberMacro {
 private extension TypeDefinition {
 
     var appropriateInitialValue: String? {
-        switch self {
+        switch kind {
         case .optional: "nil"
         case .identifier(let name) where name.starts(with: "Optional<"): "nil"
 

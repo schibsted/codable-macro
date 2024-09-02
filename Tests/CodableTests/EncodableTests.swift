@@ -153,6 +153,55 @@ final class EncodableTests: XCTestCase {
         )
     }
 
+    func testDecodableMacro_whenPropertyTypeIsNested() throws {
+        assertMacroExpansion(
+            """
+            @Encodable
+            struct Outer<O> {
+                @Encodable
+                struct Inner {
+                    @Encodable
+                    struct Innermost<I> {
+                    }
+                }
+
+                let thing: Outer<Void>.Inner.Innermost<Void>
+            }
+            """,
+            expandedSource: """
+
+            struct Outer<O> {
+                struct Inner {
+                    struct Innermost<I> {
+                    }
+                }
+
+                let thing: Outer<Void>.Inner.Innermost<Void>
+
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+
+                    try container.encode(thing, forKey: .thing)
+                }
+
+                enum CodingKeys: String, CodingKey {
+                    case thing
+                }
+            }
+
+            extension Innermost: Encodable {
+            }
+
+            extension Inner: Encodable {
+            }
+
+            extension Outer: Encodable {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
     func testEncodableMacro_whenAppliedToActor_throwsError() throws {
         assertMacroExpansion(
             """

@@ -241,8 +241,8 @@ final class MemberwiseInitializableTests: XCTestCase {
                 private init(
                     bar: String = "",
                     boo: Int? = nil,
-                    fus: [String],
-                    dah: [String?: Int?]? = nil
+                    fus: Array<String>,
+                    dah: Dictionary<String?, Int?>? = nil
                 ) {
                     self.bar = bar
                     self.boo = boo

@@ -19,17 +19,17 @@ final class DecodableTests: XCTestCase {
             """
             @Decodable
             public struct Foo: Equatable {
-                @CodableKey("beer.doo") public var bar: String
-                @CodableKey("beer.fus") public var fus: String
-                @CodableKey("ro.duh.dah") public var dah: String
+                @CodableKey("beer.doo") public var bar: Swift.String
+                @CodableKey("beer.fus") public var fus: Swift.String
+                @CodableKey("ro.duh.dah") public var dah: Swift.String
                 @CodableKey("booz") public var baz: Int?
                 @CodableKey("qox") public var qux: [Qux] = [.one]
 
-                public var array: [String] = []
+                public var array: [Swift.String] = []
                 public var optionalArray: [Int]?
-                public var dict: [String: Int]
+                public var dict: [Swift.String: Int]
 
-                @CodableIgnored public var neverMindMe: String = "some value"
+                @CodableIgnored public var neverMindMe: Swift.String = "some value"
                 public let immutable: Int = 0
                 public static var booleanValue = false
             }
@@ -37,17 +37,17 @@ final class DecodableTests: XCTestCase {
             expandedSource: """
 
             public struct Foo: Equatable {
-                public var bar: String
-                public var fus: String
-                public var dah: String
+                public var bar: Swift.String
+                public var fus: Swift.String
+                public var dah: Swift.String
                 public var baz: Int?
                 public var qux: [Qux] = [.one]
 
-                public var array: [String] = []
+                public var array: [Swift.String] = []
                 public var optionalArray: [Int]?
-                public var dict: [String: Int]
+                public var dict: [Swift.String: Int]
 
-                public var neverMindMe: String = "some value"
+                public var neverMindMe: Swift.String = "some value"
                 public let immutable: Int = 0
                 public static var booleanValue = false
 
@@ -56,14 +56,14 @@ final class DecodableTests: XCTestCase {
 
                     do {
                         let beerContainer = try container.nestedContainer(keyedBy: CodingKeys.BeerCodingKeys.self, forKey: .beer)
-                        bar = try beerContainer.decode(String.self, forKey: .bar)
+                        bar = try beerContainer.decode(Swift.String.self, forKey: .bar)
                     } catch {
                         throw error
                     }
 
                     do {
                         let beerContainer = try container.nestedContainer(keyedBy: CodingKeys.BeerCodingKeys.self, forKey: .beer)
-                        fus = try beerContainer.decode(String.self, forKey: .fus)
+                        fus = try beerContainer.decode(Swift.String.self, forKey: .fus)
                     } catch {
                         throw error
                     }
@@ -71,7 +71,7 @@ final class DecodableTests: XCTestCase {
                     do {
                         let roContainer = try container.nestedContainer(keyedBy: CodingKeys.RoCodingKeys.self, forKey: .ro)
                         let roDuhContainer = try roContainer.nestedContainer(keyedBy: CodingKeys.RoCodingKeys.DuhCodingKeys.self, forKey: .duh)
-                        dah = try roDuhContainer.decode(String.self, forKey: .dah)
+                        dah = try roDuhContainer.decode(Swift.String.self, forKey: .dah)
                     } catch {
                         throw error
                     }
@@ -91,7 +91,7 @@ final class DecodableTests: XCTestCase {
                     }
 
                     do {
-                        array = try container.decode([FailableContainer<String>].self, forKey: .array).compactMap {
+                        array = try container.decode([FailableContainer<Swift.String>].self, forKey: .array).compactMap {
                             $0.wrappedValue
                         }
                     } catch {
@@ -106,7 +106,7 @@ final class DecodableTests: XCTestCase {
                         optionalArray = nil
                     }
 
-                    dict = try container.decode([String: FailableContainer<Int>].self, forKey: .dict).compactMapValues {
+                    dict = try container.decode([Swift.String: FailableContainer<Int>].self, forKey: .dict).compactMapValues {
                         $0.wrappedValue
                     }
                 }
@@ -178,6 +178,54 @@ final class DecodableTests: XCTestCase {
             }
 
             extension Foo: Decodable {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    func testDecodableMacro_whenPropertyTypeIsNested() throws {
+        assertMacroExpansion(
+            """
+            @Decodable
+            struct Outer<O> {
+                @Decodable
+                struct Inner {
+                    @Decodable
+                    struct Innermost<I> {
+                    }
+                }
+
+                let thing: Outer<Void>.Inner.Innermost<Void>
+            }
+            """,
+            expandedSource: """
+            struct Outer<O> {
+                struct Inner {
+                    struct Innermost<I> {
+                    }
+                }
+
+                let thing: Outer<Void>.Inner.Innermost<Void>
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+                    thing = try container.decode(Outer<Void>.Inner.Innermost<Void>.self, forKey: .thing)
+                }
+
+                enum CodingKeys: String, CodingKey {
+                    case thing
+                }
+            }
+
+            extension Innermost: Decodable {
+            }
+
+            extension Inner: Decodable {
+            }
+
+            extension Outer: Decodable {
             }
             """,
             macros: testMacros

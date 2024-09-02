@@ -3,7 +3,7 @@ import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 import Foundation
 
-struct PropertyDefinition: CustomDebugStringConvertible {
+struct PropertyDefinition {
     let name: String
     let type: TypeDefinition
     let codingPath: CodingPath
@@ -89,7 +89,7 @@ struct PropertyDefinition: CustomDebugStringConvertible {
                     .withLeadingTrivia(.newline)
             } else {
                 CodeBlockItemSyntax(stringLiteral: "\(name) = try \(codingPath.codingContainerName)" +
-                                    ".decode(\(type.name).self, forKey: .\(codingPath.containerkey))")
+                                    ".decode(\(type.decodableTypeName).self, forKey: .\(codingPath.containerkey))")
             }
 
         var errorHandlingStatement: CodeBlockItemSyntax? {
@@ -127,9 +127,5 @@ struct PropertyDefinition: CustomDebugStringConvertible {
         encodeStatement.trailingTrivia = .newline
 
         return encodeStatement
-    }
-
-    var debugDescription: String {
-        "PropertyDefinition(let \(name): \(type.name)\(type.isOptional ? "?" : ""))\(defaultValue.map { " = \($0)" } ?? "")"
     }
 }

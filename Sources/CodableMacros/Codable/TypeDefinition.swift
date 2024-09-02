@@ -3,18 +3,32 @@ import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 import Foundation
 
-indirect enum TypeDefinition: CustomStringConvertible {
-    case optional(wrappedType: TypeDefinition)
-    case array(elementType: String)
-    case set(elementType: String)
-    case dictionary(keyType: String, valueType: String)
-    case identifier(name: String)
+final class TypeDefinition: CustomStringConvertible {
+    enum Kind {
+        case optional(wrappedType: TypeDefinition)
+        case array(elementType: String)
+        case set(elementType: String)
+        case dictionary(keyType: String, valueType: String)
+        case identifier(name: String)
+    }
+
+    let kind: Kind
+    let baseTypeName: String?
 
     init?(type: TypeSyntax) {
-        if let identifier = type.as(IdentifierTypeSyntax.self) {
-            let typeName = identifier.name.text
+        if type.is(MemberTypeSyntax.self) || type.is(IdentifierTypeSyntax.self) {
+            let (typeName, genericArgumentClause): (String?, GenericArgumentClauseSyntax?) =
+                if let identifier = type.as(IdentifierTypeSyntax.self) {
+                    (identifier.name.text, identifier.genericArgumentClause)
+                } else if let member = type.as(MemberTypeSyntax.self) {
+                    (member.name.text, member.genericArgumentClause)
+                } else {
+                    (nil, nil)
+                }
 
-            if let genericArgumentClause = identifier.genericArgumentClause {
+            guard let typeName else { return nil }
+
+            if let genericArgumentClause {
                 let genericParameterTypes = genericArgumentClause.arguments.map { $0.argument }
                 let genericParameterNames = genericArgumentClause.arguments.map { $0.trimmedDescription }
                 
@@ -23,68 +37,77 @@ indirect enum TypeDefinition: CustomStringConvertible {
                     guard let elementType = genericParameterNames.first else {
                         return nil
                     }
-                    
-                    self = .array(elementType: elementType)
+
+                    kind = .array(elementType: elementType)
 
                 case "Set":
                     guard let elementType = genericParameterNames.first else {
                         return nil
                     }
 
-                    self = .set(elementType: elementType)
+                    kind = .set(elementType: elementType)
 
                 case "Dictionary":
                     guard genericParameterNames.count == 2 else {
                         return nil
                     }
 
-                    self = .dictionary(keyType: genericParameterNames[0], valueType: genericParameterNames[1])
-                
+                    kind = .dictionary(keyType: genericParameterNames[0], valueType: genericParameterNames[1])
+
                 case "Optional":
                     guard let wrappedType = genericParameterTypes.first.flatMap({ TypeDefinition(type: $0) }) else {
                         return nil
                     }
 
-                    self = .optional(wrappedType: wrappedType)
+                    kind = .optional(wrappedType: wrappedType)
 
                 default:
-                    self = .identifier(name: "\(typeName)\(genericArgumentClause.trimmedDescription)")
+                    kind = .identifier(name: "\(typeName)\(genericArgumentClause.trimmedDescription)")
                 }
             } else {
-                self = .identifier(name: typeName)
+                kind = .identifier(name: typeName)
             }
+
+            baseTypeName = type.as(MemberTypeSyntax.self)?.baseType.trimmedDescription
         } else if let optional = type.as(OptionalTypeSyntax.self),
                   let wrappedDeclaration = TypeDefinition(type: optional.wrappedType) {
-            self = .optional(wrappedType: wrappedDeclaration)
+            kind = .optional(wrappedType: wrappedDeclaration)
+            baseTypeName = nil
         } else if let array = type.as(ArrayTypeSyntax.self) {
-            self = .array(elementType: array.element.trimmedDescription)
+            kind = .array(elementType: array.element.trimmedDescription)
+            baseTypeName = nil
         } else if let dictionary = type.as(DictionaryTypeSyntax.self) {
-            self = .dictionary(
+            kind = .dictionary(
                 keyType: dictionary.key.trimmedDescription,
                 valueType: dictionary.value.trimmedDescription
             )
+            baseTypeName = nil
         } else {
             return nil
         }
     }
 
-    var name: String {
-        switch self {
+    var decodableTypeName: String {
+        let name = switch kind {
         case let .identifier(name):
             name
         case let .array(elementType):
-            "[\(elementType)]"
+            "Array<\(elementType)>"
         case let .set(elementType):
             "Set<\(elementType)>"
         case .dictionary(let keyType, let elementType):
-            "[\(keyType): \(elementType)]"
+            "Dictionary<\(keyType): \(elementType)>"
         case let .optional(wrappedType):
-            wrappedType.name
+            wrappedType.decodableTypeName
         }
+
+        return [baseTypeName, name]
+            .compactMap { $0 }
+            .joined(separator: ".")
     }
 
     var isCollection: Bool {
-        switch self {
+        switch kind {
         case .array, .set, .dictionary:
             true
         case let .optional(wrappedType):
@@ -95,7 +118,7 @@ indirect enum TypeDefinition: CustomStringConvertible {
     }
 
     var arrayElementType: String? {
-        switch self {
+        switch kind {
         case let .array(elementType):
             elementType
         case let .optional(wrappedType):
@@ -106,7 +129,7 @@ indirect enum TypeDefinition: CustomStringConvertible {
     }
 
     var setElementType: String? {
-        switch self {
+        switch kind {
         case let .set(elementType):
             elementType
         case let .optional(wrappedType):
@@ -117,7 +140,7 @@ indirect enum TypeDefinition: CustomStringConvertible {
     }
 
     var dictionaryElementType: (key: String, value: String)? {
-        switch self {
+        switch kind {
         case let .dictionary(keyType, elementType):
             (keyType, elementType)
         case let .optional(wrappedType):
@@ -128,7 +151,7 @@ indirect enum TypeDefinition: CustomStringConvertible {
     }
 
     var isOptional: Bool {
-        switch self {
+        switch kind {
         case .optional:
             true
         default:
@@ -137,17 +160,21 @@ indirect enum TypeDefinition: CustomStringConvertible {
     }
 
     var description: String {
-        switch self {
+        let description = switch kind {
         case let .identifier(name):
             name
         case let .optional(wrappedType):
             "\(wrappedType.description)?"
         case let .array(elementType):
-            "[\(elementType.description)]"
+            "Array<\(elementType.description)>"
         case let .set(elementType):
             "Set<\(elementType.description)>"
         case .dictionary(let keyType, let elementType):
-            "[\(keyType.description): \(elementType.description)]"
+            "Dictionary<\(keyType.description), \(elementType.description)>"
         }
+
+        return [baseTypeName, description]
+            .compactMap { $0 }
+            .joined(separator: ".")
     }
 }

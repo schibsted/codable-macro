@@ -16,7 +16,7 @@ public struct Foo: Equatable {
     var baz: Int?
     
     @CodableKey("qox")
-    var qux: [Qux] = [.one]
+    var qux: [Foo.Qux] = [.one]
 
     var array: [String] = []
 
@@ -55,6 +55,18 @@ struct SomeDecodable {
 @Encodable
 struct SomeEncodable {
     let bar: String
+}
+
+@Decodable
+struct Outer<O> {
+    @Decodable
+    struct Inner {
+        @Decodable
+        struct Innermost<I> {
+        }
+    }
+
+    let thing: Outer<Void>.Inner.Innermost<Void>
 }
 
 let subjects: [String: Foo] = [
