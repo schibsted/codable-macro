@@ -219,10 +219,10 @@ final class DecodableTests: XCTestCase {
                 }
             }
 
-            extension Innermost: Decodable {
+            extension Outer.Inner.Innermost: Decodable {
             }
 
-            extension Inner: Decodable {
+            extension Outer.Inner: Decodable {
             }
 
             extension Outer: Decodable {
@@ -471,12 +471,11 @@ final class DecodableTests: XCTestCase {
             expandedSource: """
 
             struct Foo {
-                
                 let specialProperty: String
 
                 static func decodeSpecialProperty(from decoder: Decoder) throws -> Bool { "custom decoded value" }
             }
-            
+
             extension Foo: Decodable {
             }
             """,

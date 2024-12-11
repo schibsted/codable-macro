@@ -169,7 +169,6 @@ final class EncodableTests: XCTestCase {
             }
             """,
             expandedSource: """
-
             struct Outer<O> {
                 struct Inner {
                     struct Innermost<I> {
@@ -189,10 +188,10 @@ final class EncodableTests: XCTestCase {
                 }
             }
 
-            extension Innermost: Encodable {
+            extension Outer.Inner.Innermost: Encodable {
             }
 
-            extension Inner: Encodable {
+            extension Outer.Inner: Encodable {
             }
 
             extension Outer: Encodable {

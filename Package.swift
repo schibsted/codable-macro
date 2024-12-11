@@ -19,8 +19,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        // Depend on the Swift 5.9 release of SwiftSyntax
-        .package(url: "https://github.com/swiftlang/swift-syntax", from: "600.0.1"),
+        .package(url: "https://github.com/schibsted/swift-syntax-xcframeworks.git", from: "600.0.1"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -29,8 +28,7 @@ let package = Package(
         .macro(
             name: "CodableMacros",
             dependencies: [
-                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
-                .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
+                .product(name: "SwiftSyntaxWrapper", package: "swift-syntax-xcframeworks"),
             ]
         ),
 
@@ -45,7 +43,7 @@ let package = Package(
             name: "CodableTests",
             dependencies: [
                 "CodableMacros",
-                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxWrapper", package: "swift-syntax-xcframeworks"),
             ]
         ),
     ]
