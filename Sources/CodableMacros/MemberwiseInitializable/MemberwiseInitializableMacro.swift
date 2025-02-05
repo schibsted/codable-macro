@@ -43,7 +43,7 @@ extension MemberwiseInitializableMacro: MemberMacro {
             }
 
             accessLevel = level
-        } else if let firstModifier = declaration.modifiers.first {
+        } else if let firstModifier = declaration.accessLevelModifiers.first {
             let isOpen = firstModifier.name.tokenKind == .keyword(.open)
             accessLevel = isOpen ? "public" : firstModifier.trimmedDescription
         } else {
@@ -69,6 +69,20 @@ extension MemberwiseInitializableMacro: MemberMacro {
         }
         """
         ]
+    }
+}
+
+private extension DeclGroupSyntax {
+
+    var accessLevelModifiers: DeclModifierListSyntax {
+        modifiers.filter {
+            switch $0.name.tokenKind {
+            case .keyword(.open), .keyword(.public), .keyword(.private), .keyword(.internal), .keyword(.fileprivate):
+                return true
+            default:
+                return false
+            }
+        }
     }
 }
 

@@ -219,6 +219,54 @@ final class MemberwiseInitializableTests: XCTestCase {
         )
     }
 
+    func testMemberwiseInitializableMacro_whenAppliedToFinalType() throws {
+        assertMacroExpansion(
+            """
+            @MemberwiseInitializable
+            final class Foo {
+                let bar: String
+            }
+            """,
+            expandedSource: """
+
+            final class Foo {
+                let bar: String
+
+                init(
+                    bar: String
+                ) {
+                    self.bar = bar
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    func testMemberwiseInitializableMacro_whenAppliedToFinalPublicType_handlesNonStandardKeywordOrder() throws {
+        assertMacroExpansion(
+            """
+            @MemberwiseInitializable
+            final public class Foo {
+                let bar: String
+            }
+            """,
+            expandedSource: """
+
+            final public class Foo {
+                let bar: String
+
+                public init(
+                    bar: String
+                ) {
+                    self.bar = bar
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
     func testMemberwiseInitializableMacro_withNonTrivialType() throws {
         assertMacroExpansion(
             """
