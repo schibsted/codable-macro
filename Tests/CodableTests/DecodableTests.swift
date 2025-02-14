@@ -592,4 +592,53 @@ final class DecodableTests: XCTestCase {
             macros: testMacros
         )
     }
+    
+    func testDecodableMacro_whenPropertyHasSameNameAsComponentOfCustomCodingKey() {
+        assertMacroExpansion(
+            """
+            @Decodable
+            struct Foo {
+                var bar: Bar
+                @CodableKey("bar.baz") var baz: Baz
+            }
+            """,
+            expandedSource: """
+
+            struct Foo {
+                var bar: Bar
+                var baz: Baz
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+                    do {
+                        let barContainer = try container.nestedContainer(keyedBy: CodingKeys.BarCodingKeys.self, forKey: .bar)
+                        bar = try container.decode(Bar.self, forKey: .bar)
+                    } catch {
+                        throw error
+                    }
+
+                    do {
+                        let barContainer = try container.nestedContainer(keyedBy: CodingKeys.BarCodingKeys.self, forKey: .bar)
+                        baz = try barContainer.decode(Baz.self, forKey: .baz)
+                    } catch {
+                        throw error
+                    }
+                }
+
+                enum CodingKeys: String, CodingKey {
+                    case bar
+
+                    enum BarCodingKeys: String, CodingKey {
+                        case baz
+                    }
+                }
+            }
+
+            extension Foo: Decodable {
+            }
+            """,
+            macros: testMacros
+        )
+    }
 }

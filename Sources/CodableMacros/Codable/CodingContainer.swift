@@ -33,7 +33,9 @@ final class CodingContainer {
 
                 if let keys = CodingContainer(name: caseName, paths: nestedPaths) {
                     nestedContainers.append(keys)
-                    cases.append(caseName)
+                    if !cases.contains(caseName) {
+                        cases.append(caseName)
+                    }
                 }
             }
 
@@ -125,5 +127,3 @@ struct ContainerKind {
         self.coderName = coderName
     }
 }
-
-
