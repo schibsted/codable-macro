@@ -678,12 +678,7 @@ final class DecodableTests: XCTestCase {
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
-                    do {
-                        let barContainer = try container.nestedContainer(keyedBy: CodingKeys.BarCodingKeys.self, forKey: .bar)
-                        bar = try container.decode(Bar.self, forKey: .bar)
-                    } catch {
-                        throw error
-                    }
+                    bar = try container.decode(Bar.self, forKey: .bar)
 
                     do {
                         let barContainer = try container.nestedContainer(keyedBy: CodingKeys.BarCodingKeys.self, forKey: .bar)

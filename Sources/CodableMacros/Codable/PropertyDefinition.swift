@@ -40,9 +40,13 @@ struct PropertyDefinition {
             .map { $0.split(separator: ".", omittingEmptySubsequences: true).map { String($0) } }
         ?? [name]
 
+        guard let codingPath = CodingPath(components: pathFragments, propertyName: name) else {
+            return nil
+        }
+
         self.name = name
         self.type = type
-        self.codingPath = CodingPath(components: pathFragments, propertyName: name)
+        self.codingPath = codingPath
         self.defaultValue = patternBinding.initializer?.value.trimmedDescription
         self.isImmutable = property.isImmutable
         self.isExplicitlyExcludedFromCodable = propertyAttributes.contains(where: { $0.isCodableIgnored })

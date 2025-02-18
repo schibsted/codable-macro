@@ -29,7 +29,7 @@ final class CodingContainer {
 
                 let nestedPaths = codingPaths
                     .filter { !$0.isTerminal }
-                    .map { $0.droppingFirstComponent() }
+                    .compactMap { $0.droppingFirstComponent() }
 
                 if let keys = CodingContainer(name: caseName, paths: nestedPaths) {
                     nestedContainers.append(keys)
@@ -99,8 +99,9 @@ final class CodingContainer {
     }
 
     func nestedCodingContainers(along codingPath: CodingPath) -> [CodingContainer] {
-        if let nestedContainer = nestedContainers.first(where: { $0.name == codingPath.firstComponent }) {
-            [nestedContainer] + nestedContainer.nestedCodingContainers(along: codingPath.droppingFirstComponent())
+        if let nestedContainer = nestedContainers.first(where: { $0.name == codingPath.firstComponent }),
+           let nestedCodingPath = codingPath.droppingFirstComponent() {
+            [nestedContainer] + nestedContainer.nestedCodingContainers(along: nestedCodingPath)
         } else {
             []
         }
