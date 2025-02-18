@@ -10,7 +10,8 @@ final class CodableTests: XCTestCase {
         "Decodable": DecodableMacro.self,
         "Encodable": EncodableMacro.self,
         "CodableKey": CodableKeyMacro.self,
-        "CodableIgnored": CodableIgnoredMacro.self
+        "CodableIgnored": CodableIgnoredMacro.self,
+        "MemberwiseInitializable": MemberwiseInitializableMacro.self
     ]
 
     func testCodableMacro_withSimpleType() throws {
@@ -26,6 +27,12 @@ final class CodableTests: XCTestCase {
             struct Foo {
                 var bar: String
 
+                init(
+                    bar: String
+                ) {
+                    self.bar = bar
+                }
+            
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -63,6 +70,12 @@ final class CodableTests: XCTestCase {
             public struct Foo {
                 public var bar: String
 
+                public init(
+                    bar: String
+                ) {
+                    self.bar = bar
+                }
+            
                 public init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -100,6 +113,12 @@ final class CodableTests: XCTestCase {
             struct Foo {
                 var bar: String = "something"
 
+                init(
+                    bar: String = "something"
+                ) {
+                    self.bar = bar
+                }
+            
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -141,6 +160,12 @@ final class CodableTests: XCTestCase {
             struct Foo {
                 var bar: String?
 
+                init(
+                    bar: String? = nil
+                ) {
+                    self.bar = bar
+                }
+            
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -182,6 +207,12 @@ final class CodableTests: XCTestCase {
             struct Foo {
                 var bar: String? = "something"
 
+                init(
+                    bar: String? = "something"
+                ) {
+                    self.bar = bar
+                }
+            
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -223,6 +254,12 @@ final class CodableTests: XCTestCase {
             struct Foo {
                 var bar: [String]
 
+                init(
+                    bar: Array<String>
+                ) {
+                    self.bar = bar
+                }
+            
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -270,6 +307,12 @@ final class CodableTests: XCTestCase {
             struct Foo {
                 var bar: [String: String]
 
+                init(
+                    bar: Dictionary<String, String>
+                ) {
+                    self.bar = bar
+                }
+            
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -318,6 +361,12 @@ final class CodableTests: XCTestCase {
             struct Foo {
                 var bar: String
 
+                init(
+                    bar: String
+                ) {
+                    self.bar = bar
+                }
+            
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -359,6 +408,14 @@ final class CodableTests: XCTestCase {
                 var bar: String
                 var baz: Int = 42
 
+                init(
+                    bar: String,
+                    baz: Int = 42
+                ) {
+                    self.bar = bar
+                    self.baz = baz
+                }
+            
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -383,6 +440,96 @@ final class CodableTests: XCTestCase {
         )
     }
 
+    func testCodableMacro_whenHasMemberwiseInitializableMacro_generatesMemberwiseIntializerOnce() throws {
+        assertMacroExpansion(
+            """
+            @Codable
+            @MemberwiseInitializable
+            struct Foo {
+                var bar: String
+            }
+            """,
+            expandedSource: """
+            
+            struct Foo {
+                var bar: String
+            
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+                    bar = try container.decode(String.self, forKey: .bar)
+                }
+            
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+            
+                    try container.encode(bar, forKey: .bar)
+                }
+            
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                }
+            
+                init(
+                    bar: String
+                ) {
+                    self.bar = bar
+                }
+            }
+            
+            extension Foo: Codable {
+            }
+            """,
+
+            macros: testMacros
+        )
+    }
+
+    func testCodableMacro_whenHasMemberwiseInitializableMacroWithAccessLevel_generatesMemberwiseIntializerOnce() throws {
+        assertMacroExpansion(
+            """
+            @Codable
+            @MemberwiseInitializable(.private)
+            struct Foo {
+                var bar: String
+            }
+            """,
+            expandedSource: """
+            
+            struct Foo {
+                var bar: String
+            
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+                    bar = try container.decode(String.self, forKey: .bar)
+                }
+            
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+            
+                    try container.encode(bar, forKey: .bar)
+                }
+            
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                }
+            
+                private init(
+                    bar: String
+                ) {
+                    self.bar = bar
+                }
+            }
+            
+            extension Foo: Codable {
+            }
+            """,
+
+            macros: testMacros
+        )
+    }
+
     func testCodableMacro_whenImmutablePropertyHasDefaultValue_isExcludedFromGeneratedCode() throws {
         assertMacroExpansion(
             """
@@ -398,6 +545,12 @@ final class CodableTests: XCTestCase {
                 let bar: String
                 let baz: Int = 42
 
+                init(
+                    bar: String
+                ) {
+                    self.bar = bar
+                }
+            
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -436,6 +589,12 @@ final class CodableTests: XCTestCase {
             struct Foo {
                 var bar: String
 
+                init(
+                    bar: String
+                ) {
+                    self.bar = bar
+                }
+            
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -527,6 +686,12 @@ final class CodableTests: XCTestCase {
 
                 var isValid: Bool { !bar.isEmpty }
 
+                init(
+                    bar: String
+                ) {
+                    self.bar = bar
+                }
+            
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -674,6 +839,28 @@ final class CodableTests: XCTestCase {
 
                 public var neverMindMe: String = "some value"
                 public let immutable: Int = 0
+            
+                public init(
+                    bar: String,
+                    fus: String,
+                    dah: String,
+                    baz: Int? = nil,
+                    qux: Array<Qux> = [.one],
+                    array: Array<String> = [],
+                    optionalArray: Array<Int>? = nil,
+                    dict: Dictionary<String, Int>,
+                    neverMindMe: String = "some value"
+                ) {
+                    self.bar = bar
+                    self.fus = fus
+                    self.dah = dah
+                    self.baz = baz
+                    self.qux = qux
+                    self.array = array
+                    self.optionalArray = optionalArray
+                    self.dict = dict
+                    self.neverMindMe = neverMindMe
+                }
 
                 public init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)

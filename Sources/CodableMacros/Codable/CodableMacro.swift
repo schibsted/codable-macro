@@ -64,12 +64,20 @@ extension CodableMacro: MemberMacro {
             fatalError("Failed to generate coding keys")
         }
 
-        return [
+        var memberwiseInitializableMacroDeclaration = [DeclSyntax]()
+        if !declaration.attributes.containsMemberwiseInitializableMacro {
+            var nodeWithoutArguments = node
+            nodeWithoutArguments.arguments = nil
+
+            memberwiseInitializableMacroDeclaration = try MemberwiseInitializableMacro.expansion(of: nodeWithoutArguments, providingMembersOf: declaration, in: context)
+        }
+
+        return memberwiseInitializableMacroDeclaration + [
             DeclSyntax(decoderWithCodingContainer: codingContainer, properties: storedProperties, isPublic: declaration.isPublic, needsValidation: node.needsValidation),
             DeclSyntax(encoderWithCodingContainer: codingContainer, properties: storedProperties, isPublic: declaration.isPublic),
             try codingContainer.codingKeysDeclaration,
             shouldIncludeFailableContainer ? .failableContainer() : nil
         ]
-        .compactMap { $0 }
+            .compactMap { $0 }
     }
 }

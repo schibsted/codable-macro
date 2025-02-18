@@ -2,11 +2,11 @@
 // https://docs.swift.org/swift-book
 
 @attached(extension, conformances: Codable)
-@attached(member, names: named(init(from:)), named(encode(to:)), named(CodingKeys), named(FailableContainer))
+@attached(member, names: named(init), named(init(from:)), named(encode(to:)), named(CodingKeys), named(FailableContainer))
 public macro Codable(needsValidation: Bool = false) = #externalMacro(module: "CodableMacros", type: "CodableMacro")
 
 @attached(extension, conformances: Decodable)
-@attached(member, names: named(init(from:)), named(CodingKeys), named(FailableContainer))
+@attached(member, names: named(init), named(init(from:)), named(CodingKeys), named(FailableContainer))
 public macro Decodable(needsValidation: Bool = false) = #externalMacro(module: "CodableMacros", type: "DecodableMacro")
 
 @attached(extension, conformances: Encodable)

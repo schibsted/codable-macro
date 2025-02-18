@@ -21,6 +21,11 @@ extension AttributeListSyntax {
             .filter { codableMacros.contains($0.trimmedDescription) }
             .count > 1
     }
+
+    var containsMemberwiseInitializableMacro: Bool {
+        self
+            .contains { $0.trimmedDescription.hasPrefix("@MemberwiseInitializable") }
+    }
 }
 
 extension AttributeSyntax {
