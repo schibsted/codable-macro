@@ -10,20 +10,20 @@ final class MemberwiseInitializableTests: XCTestCase {
     ]
 
     func testMemberwiseInitializableMacro_withSimpleType() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @MemberwiseInitializable
             struct Foo {
-                var bar: Bar
+                var bar: String
             }
             """,
             expandedSource: """
 
             struct Foo {
-                var bar: Bar
+                var bar: String
 
                 init(
-                    bar: Bar
+                    bar: String
                 ) {
                     self.bar = bar
                 }
@@ -34,23 +34,29 @@ final class MemberwiseInitializableTests: XCTestCase {
     }
 
     func testMemberwiseInitializableMacro_whenPropertyTypeHasGenerics() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @MemberwiseInitializable
             struct Foo {
-                var bar: Generic<Bar>
+                var bar: Generic<String>
+            }
+            
+            struct Generic<T> {
             }
             """,
             expandedSource: """
 
             struct Foo {
-                var bar: Generic<Bar>
+                var bar: Generic<String>
 
                 init(
-                    bar: Generic<Bar>
+                    bar: Generic<String>
                 ) {
                     self.bar = bar
                 }
+            }
+
+            struct Generic<T> {
             }
             """,
             macros: testMacros
@@ -58,20 +64,20 @@ final class MemberwiseInitializableTests: XCTestCase {
     }
 
     func testMemberwiseInitializableMacro_withDefaultPropertyValues() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @MemberwiseInitializable
             struct Foo {
-                var bar: Bar = "default value"
+                var bar: String = "default value"
             }
             """,
             expandedSource: """
 
             struct Foo {
-                var bar: Bar = "default value"
+                var bar: String = "default value"
 
                 init(
-                    bar: Bar = "default value"
+                    bar: String = "default value"
                 ) {
                     self.bar = bar
                 }
@@ -82,11 +88,11 @@ final class MemberwiseInitializableTests: XCTestCase {
     }
 
     func testMemberwiseInitializableMacro_ifImmutablePropertyHasDefaultValue_isNotIncluded() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @MemberwiseInitializable
             struct Foo {
-                var bar: Bar
+                var bar: String
                 var mutable: String = "something"
                 let immutable: String = "something else"
             }
@@ -94,12 +100,12 @@ final class MemberwiseInitializableTests: XCTestCase {
             expandedSource: """
 
             struct Foo {
-                var bar: Bar
+                var bar: String
                 var mutable: String = "something"
                 let immutable: String = "something else"
 
                 init(
-                    bar: Bar,
+                    bar: String,
                     mutable: String = "something"
                 ) {
                     self.bar = bar
@@ -112,20 +118,20 @@ final class MemberwiseInitializableTests: XCTestCase {
     }
 
     func testMemberwiseInitializableMacro_withPublicType_generatesPublicInitializer() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @MemberwiseInitializable
             public struct Foo {
-                public var bar: Bar
+                public var bar: String
             }
             """,
             expandedSource: """
 
             public struct Foo {
-                public var bar: Bar
+                public var bar: String
 
                 public init(
-                    bar: Bar
+                    bar: String
                 ) {
                     self.bar = bar
                 }
@@ -136,20 +142,20 @@ final class MemberwiseInitializableTests: XCTestCase {
     }
 
     func testMemberwiseInitializableMacro_withOpenType_generatesPublicInitializer() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @MemberwiseInitializable
             open class Foo {
-                public var bar: Bar
+                public var bar: String
             }
             """,
             expandedSource: """
 
             open class Foo {
-                public var bar: Bar
+                public var bar: String
 
                 public init(
-                    bar: Bar
+                    bar: String
                 ) {
                     self.bar = bar
                 }
@@ -160,7 +166,7 @@ final class MemberwiseInitializableTests: XCTestCase {
     }
 
     func testMemberwiseInitializableMacro_whenTypeHasInitialValue_usesItAsDefaultValue() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @MemberwiseInitializable
             class Foo {
@@ -196,20 +202,20 @@ final class MemberwiseInitializableTests: XCTestCase {
     }
 
     func testMemberwiseInitializableMacro_withAccessLevel_generatesInitializerWithSpecifiedAccessLevel() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @MemberwiseInitializable(.fileprivate)
             public struct Foo {
-                public var bar: Bar
+                public var bar: String
             }
             """,
             expandedSource: """
 
             public struct Foo {
-                public var bar: Bar
+                public var bar: String
 
                 fileprivate init(
-                    bar: Bar
+                    bar: String
                 ) {
                     self.bar = bar
                 }
@@ -220,7 +226,7 @@ final class MemberwiseInitializableTests: XCTestCase {
     }
 
     func testMemberwiseInitializableMacro_whenAppliedToFinalType() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @MemberwiseInitializable
             final class Foo {
@@ -244,7 +250,7 @@ final class MemberwiseInitializableTests: XCTestCase {
     }
 
     func testMemberwiseInitializableMacro_whenAppliedToFinalPublicType_handlesNonStandardKeywordOrder() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @MemberwiseInitializable
             final public class Foo {
@@ -268,7 +274,7 @@ final class MemberwiseInitializableTests: XCTestCase {
     }
 
     func testMemberwiseInitializableMacro_withNonTrivialType() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @MemberwiseInitializable(.private)
             struct Foo {

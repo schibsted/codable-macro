@@ -15,7 +15,7 @@ final class CodableTests: XCTestCase {
     ]
 
     func testCodableMacro_withSimpleType() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             struct Foo {
@@ -58,7 +58,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_withPublicType_generatedDeclarationsArePublic() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             public struct Foo {
@@ -101,7 +101,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_whenPropertyHasDefaultValue_setToDefaultValueIfDecodingFails() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             struct Foo {
@@ -148,7 +148,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_whenPropertyIsOptional_setToNilIfDecodingFails() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             struct Foo {
@@ -195,7 +195,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_whenPropertyIsOptionalAndHasDefaultValue_setToDefaultValueIfDecodingFails() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             struct Foo {
@@ -242,7 +242,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_withArrayProperty_generatesHelperContainerType() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             struct Foo {
@@ -295,7 +295,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_withDictionaryProperty_generatesHelperContainerType() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             struct Foo {
@@ -348,7 +348,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_withCustomCodingKey_generatesCorrectCodingKeys() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             struct Foo {
@@ -392,7 +392,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_whenPropertyIsExplicitlyIgnored_isExcludedFromGeneratedCode() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             struct Foo {
@@ -441,7 +441,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_whenHasMemberwiseInitializableMacro_generatesMemberwiseIntializerOnce() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             @MemberwiseInitializable
@@ -531,7 +531,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_whenImmutablePropertyHasDefaultValue_isExcludedFromGeneratedCode() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             struct Foo {
@@ -576,7 +576,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_whenDecodingFromNestedContainer_generatesNestedCodingKeys() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             struct Foo {
@@ -630,7 +630,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_whenAppliedToEnum() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             enum Foo {
@@ -651,7 +651,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_whenAppliedToEmptyType() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             struct Foo {
@@ -670,7 +670,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_whenValidationNeeded_includesValidationCode() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable(needsValidation: true)
             struct Foo {
@@ -810,24 +810,32 @@ final class CodableTests: XCTestCase {
             """
             @Codable
             struct Foo {
-                var bar: Bar
-                @CodableKey("bar.baz") var baz: Baz
+                var bar: String
+                @CodableKey("bar.baz") var baz: Int
             }
             """,
             expandedSource: """
 
             struct Foo {
-                var bar: Bar
-                var baz: Baz
+                var bar: String
+                var baz: Int
+
+                init(
+                    bar: String,
+                    baz: Int
+                ) {
+                    self.bar = bar
+                    self.baz = baz
+                }
 
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
-                    bar = try container.decode(Bar.self, forKey: .bar)
+                    bar = try container.decode(String.self, forKey: .bar)
 
                     do {
                         let barContainer = try container.nestedContainer(keyedBy: CodingKeys.BarCodingKeys.self, forKey: .bar)
-                        baz = try barContainer.decode(Baz.self, forKey: .baz)
+                        baz = try barContainer.decode(Int.self, forKey: .baz)
                     } catch {
                         throw error
                     }
@@ -858,7 +866,7 @@ final class CodableTests: XCTestCase {
     }
 
     func testCodableMacro_withNonTrivialType() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Codable
             public struct Foo: Equatable {
@@ -874,6 +882,10 @@ final class CodableTests: XCTestCase {
 
                 @CodableIgnored public var neverMindMe: String = "some value"
                 public let immutable: Int = 0
+            }
+            
+            public enum Qux: String, Codable, Equatable {
+                case one, two
             }
             """,
             expandedSource: """
@@ -1014,7 +1026,11 @@ final class CodableTests: XCTestCase {
                     }
                 }
             }
-
+            
+            public enum Qux: String, Codable, Equatable {
+                case one, two
+            }
+            
             extension Foo: Codable {
             }
             """,

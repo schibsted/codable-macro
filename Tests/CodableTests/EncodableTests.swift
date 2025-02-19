@@ -14,7 +14,7 @@ final class EncodableTests: XCTestCase {
     ]
 
     func testEncodableMacro_withNonTrivialType() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Encodable
             public struct Foo: Equatable {
@@ -32,6 +32,10 @@ final class EncodableTests: XCTestCase {
                 public let immutable: Int = 0
                 public static var booleanValue = false
             }
+            
+            public enum Qux: String, Encodable, Equatable {
+                case one, two
+            }            
             """,
             expandedSource: """
 
@@ -83,6 +87,10 @@ final class EncodableTests: XCTestCase {
                 }
             }
 
+            public enum Qux: String, Encodable, Equatable {
+                case one, two
+            }            
+
             extension Foo: Encodable {
             }
             """,
@@ -91,7 +99,7 @@ final class EncodableTests: XCTestCase {
     }
 
     func testEncodableMacro_whenAppliedToEnum() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Encodable
             enum Foo {
@@ -112,7 +120,7 @@ final class EncodableTests: XCTestCase {
     }
 
     func testEncodableMacro_whenAppliedToEmptyType() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Encodable
             struct Foo {
@@ -131,7 +139,7 @@ final class EncodableTests: XCTestCase {
     }
 
     func testEncodableMacro_whenPropertyIsStatic_isIgnored() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Encodable
             struct Foo {
@@ -154,7 +162,7 @@ final class EncodableTests: XCTestCase {
     }
 
     func testDecodableMacro_whenPropertyTypeIsNested() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Encodable
             struct Outer<O> {

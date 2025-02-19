@@ -16,7 +16,7 @@ final class DecodableTests: XCTestCase {
     ]
 
     func testDecodableMacro_withNonTrivialType() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Decodable
             public struct Foo: Equatable {
@@ -34,6 +34,10 @@ final class DecodableTests: XCTestCase {
                 public let immutable: Int = 0
                 public static var booleanValue = false
             }
+            
+            public enum Qux: String, Codable, Equatable {
+                case one, two
+            }            
             """,
             expandedSource: """
 
@@ -159,6 +163,10 @@ final class DecodableTests: XCTestCase {
                 }
             }
 
+            public enum Qux: String, Codable, Equatable {
+                case one, two
+            }            
+
             extension Foo: Decodable {
             }
             """,
@@ -167,7 +175,7 @@ final class DecodableTests: XCTestCase {
     }
 
     func testDecodableMacro_whenAppliedToEnum() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Decodable
             enum Foo {
@@ -189,7 +197,7 @@ final class DecodableTests: XCTestCase {
 
 
     func testDecodableMacro_whenAppliedToEmptyType() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Decodable
             struct Foo {
@@ -208,7 +216,7 @@ final class DecodableTests: XCTestCase {
     }
 
     func testDecodableMacro_whenPropertyTypeIsNested() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Decodable
             struct Outer<O> {
@@ -262,7 +270,7 @@ final class DecodableTests: XCTestCase {
     }
 
     func testDecodableMacro_whenDecodingArray() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Decodable
             struct Foo {
@@ -309,7 +317,7 @@ final class DecodableTests: XCTestCase {
     }
 
     func testDecodableMacro_whenDecodingSet() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Decodable
             struct Foo {
@@ -356,7 +364,7 @@ final class DecodableTests: XCTestCase {
     }
 
     func testDecodableMacro_whenDecodingDictionary() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Decodable
             struct Foo {
@@ -403,7 +411,7 @@ final class DecodableTests: XCTestCase {
     }
 
     func testDecodableMacro_whenValidationNeeded_includesValidationCode() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Decodable(needsValidation: true)
             struct Foo {
@@ -448,13 +456,13 @@ final class DecodableTests: XCTestCase {
     }
 
     func testDecodableMacro_whenCustomDecodedApplied_callsCustomDecodingFunction() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Decodable
             struct Foo {
                 @CustomDecoded let specialProperty: String
 
-                static func decodeSpecialProperty(from decoder: Decoder) throws -> Bool { "custom decoded value" }
+                static func decodeSpecialProperty(from decoder: Decoder) throws -> String { "custom decoded value" }
             }
             """,
             expandedSource: """
@@ -462,7 +470,7 @@ final class DecodableTests: XCTestCase {
             struct Foo {
                 let specialProperty: String
 
-                static func decodeSpecialProperty(from decoder: Decoder) throws -> Bool { "custom decoded value" }
+                static func decodeSpecialProperty(from decoder: Decoder) throws -> String { "custom decoded value" }
 
                 init(
                     specialProperty: String
@@ -484,7 +492,9 @@ final class DecodableTests: XCTestCase {
             extension Foo: Decodable {
             }
             """,
-            macros: testMacros
+            macros: testMacros,
+            // TODO: CNP-29323 Remove this opt-out
+            treatWarningsAsErrors: false
         )
     }
 
@@ -570,7 +580,7 @@ final class DecodableTests: XCTestCase {
     }
 
     func testDecodableMacro_whenPropertyIsStatic_isIgnored() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Decodable
             struct Foo {
@@ -653,23 +663,23 @@ final class DecodableTests: XCTestCase {
     }
     
     func testDecodableMacro_whenPropertyHasSameNameAsComponentOfCustomCodingKey() {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Decodable
             struct Foo {
-                var bar: Bar
-                @CodableKey("bar.baz") var baz: Baz
+                var bar: String
+                @CodableKey("bar.baz") var baz: Int
             }
             """,
             expandedSource: """
 
             struct Foo {
-                var bar: Bar
-                var baz: Baz
+                var bar: String
+                var baz: Int
 
                 init(
-                    bar: Bar,
-                    baz: Baz
+                    bar: String,
+                    baz: Int
                 ) {
                     self.bar = bar
                     self.baz = baz
@@ -678,11 +688,11 @@ final class DecodableTests: XCTestCase {
                 init(from decoder: Decoder) throws {
                     let container = try decoder.container(keyedBy: CodingKeys.self)
 
-                    bar = try container.decode(Bar.self, forKey: .bar)
+                    bar = try container.decode(String.self, forKey: .bar)
 
                     do {
                         let barContainer = try container.nestedContainer(keyedBy: CodingKeys.BarCodingKeys.self, forKey: .bar)
-                        baz = try barContainer.decode(Baz.self, forKey: .baz)
+                        baz = try barContainer.decode(Int.self, forKey: .baz)
                     } catch {
                         throw error
                     }
@@ -743,7 +753,7 @@ final class DecodableTests: XCTestCase {
     }
 
     func testDecodableMacro_whenHasMemberwiseInitializableMacroWithAccessLevel_generatesMemberwiseIntializerOnce() throws {
-        assertMacroExpansion(
+        assertAndCompileMacroExpansion(
             """
             @Decodable
             @MemberwiseInitializable(.private)
