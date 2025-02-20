@@ -95,15 +95,17 @@ extension DeclSyntax {
     }
 
     init(decoderWithCodingContainer codingContainer: CodingContainer, properties: [PropertyDefinition], isPublic: Bool, needsValidation: Bool) {
-        let rootCodingContainerDeclaration = codingContainer.containerDeclaration(ofKind: .decode)
-            .withLeadingTrivia(.newline)
-            .withTrailingTrivia([])
+        let rootCodingContainerDeclaration = if properties.contains(where: { !$0.needsCustomDecoding }) {
+            "\(codingContainer.containerDeclaration(ofKind: .decode).withLeadingTrivia(.newline).withTrailingTrivia(.newline))"
+        } else {
+            ""
+        }
 
         let propertyDecodeStatements = properties
             .map { $0.decodeStatement(rootCodingContainer: codingContainer) }
         
         let propertyDecodeBlock = CodeBlockItemListSyntax(propertyDecodeStatements)
-            .withLeadingTrivia(.newlines(2))
+            .withLeadingTrivia(.newline)
             .withTrailingTrivia(.newline)
 
         let validationBlock = needsValidation

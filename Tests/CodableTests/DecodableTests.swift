@@ -477,10 +477,8 @@ final class DecodableTests: XCTestCase {
                 ) {
                     self.specialProperty = specialProperty
                 }
-            
-                init(from decoder: Decoder) throws {
-                    let container = try decoder.container(keyedBy: CodingKeys.self)
 
+                init(from decoder: Decoder) throws {
                     specialProperty = try Self.decodeSpecialProperty(from: decoder)
                 }
 
@@ -488,13 +486,11 @@ final class DecodableTests: XCTestCase {
                     case specialProperty
                 }
             }
-            
+
             extension Foo: Decodable {
             }
             """,
-            macros: testMacros,
-            // TODO: CNP-29323 Remove this opt-out
-            treatWarningsAsErrors: false
+            macros: testMacros
         )
     }
 
