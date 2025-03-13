@@ -1,6 +1,9 @@
 // swift-tools-version: 5.9
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
+// Copyright 2025 Schibsted News Media AB.
+// Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+
 import PackageDescription
 import CompilerPluginSupport
 
